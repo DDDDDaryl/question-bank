@@ -1,16 +1,12 @@
-import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { NextRequest } from 'next/server';
+import dbConnect from '@/lib/dbConnect';
+import { successResponse, errorResponse } from '@/lib/apiResponse';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const client = await clientPromise;
-    await client.db('admin').command({ ping: 1 });
-    return NextResponse.json({ message: '数据库连接成功！' });
+    await dbConnect();
+    return successResponse({ status: 'ok', timestamp: new Date().toISOString() });
   } catch (error) {
-    console.error('数据库连接错误:', error);
-    return NextResponse.json(
-      { message: '数据库连接失败' },
-      { status: 500 }
-    );
+    return errorResponse(error as Error);
   }
 } 

@@ -1,30 +1,18 @@
-import { MongoClient } from 'mongodb';
+import mongoose from 'mongoose';
 
 if (!process.env.MONGODB_URI) {
-  throw new Error('请添加 MongoDB URI 到环境变量');
+  throw new Error('请在环境变量中设置 MONGODB_URI');
 }
 
-const uri = process.env.MONGODB_URI;
-const options = {};
+const MONGODB_URI = process.env.MONGODB_URI;
 
-let client;
-let clientPromise: Promise<MongoClient>;
-
-if (process.env.NODE_ENV === 'development') {
-  // 在开发环境中使用全局变量来避免热重载时创建多个连接
-  let globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>
+async function dbConnect() {
+  try {
+    const { connection } = await mongoose.connect(MONGODB_URI);
+    return connection;
+  } catch (error) {
+    throw error;
   }
-
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    globalWithMongo._mongoClientPromise = client.connect();
-  }
-  clientPromise = globalWithMongo._mongoClientPromise;
-} else {
-  // 在生产环境中创建新的连接
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect();
 }
 
-export default clientPromise; 
+export default dbConnect; 
