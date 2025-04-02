@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/dbConnect';
 import Question from '@/models/mongodb/Question';
 import {
@@ -6,38 +6,96 @@ import {
   errorResponse,
   validationErrorResponse,
 } from '@/lib/apiResponse';
-import { validateQuestion } from '@/lib/validation';
+import { isValidObjectId } from '@/lib/objectId';
+
+interface ValidationResult {
+  isValid: boolean;
+  message?: string;
+}
+
+function validateQuestion(data: any): ValidationResult {
+  if (!data) {
+    return { isValid: false, message: "请求数据不能为空" };
+  }
+
+  // 验证必填字段
+  const requiredFields = ['title', 'type', 'content', 'options', 'answer', 'difficulty'];
+  for (const field of requiredFields) {
+    if (!data[field]) {
+      return { isValid: false, message: `${field} 字段是必需的` };
+    }
+  }
+
+  // 验证选项数组
+  if (!Array.isArray(data.options) || data.options.length < 2) {
+    return { isValid: false, message: "选项至少需要2个" };
+  }
+
+  // 验证答案
+  if (data.type === 'SINGLE_CHOICE') {
+    if (!data.options.includes(data.answer)) {
+      return { isValid: false, message: "单选题答案必须是选项之一" };
+    }
+  } else if (data.type === 'MULTIPLE_CHOICE') {
+    if (!Array.isArray(data.answer) || !data.answer.every((ans: string) => data.options.includes(ans))) {
+      return { isValid: false, message: "多选题答案必须是选项的子集" };
+    }
+  }
+
+  return { isValid: true };
+}
 
 // GET /api/questions - 获取题目列表
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
-
-    // 获取查询参数
-    const searchParams = request.nextUrl.searchParams;
-    const type = searchParams.get('type');
-    const difficulty = searchParams.get('difficulty');
-    const tag = searchParams.get('tag');
-    const search = searchParams.get('search');
-
-    // 构建查询条件
+    const { searchParams } = new URL(request.url);
+    
     const query: any = {};
-    if (type) query.type = type;
-    if (difficulty) query.difficulty = difficulty;
-    if (tag) query.tags = tag;
+    
+    // 处理搜索参数
+    const search = searchParams.get('search');
     if (search) {
       query.$or = [
         { title: { $regex: search, $options: 'i' } },
         { content: { $regex: search, $options: 'i' } },
       ];
     }
+    
+    // 处理类型筛选
+    const type = searchParams.get('type');
+    if (type) {
+      query.type = type;
+    }
+    
+    // 处理难度筛选
+    const difficulty = searchParams.get('difficulty');
+    if (difficulty) {
+      query.difficulty = difficulty;
+    }
+    
+    // 处理标签筛选
+    const tags = searchParams.get('tags');
+    if (tags) {
+      query.tags = { $in: tags.split(',').map(tag => tag.trim()) };
+    }
 
-    // 获取题目列表
     const questions = await Question.find(query).sort({ createdAt: -1 });
 
-    return successResponse({ questions });
+    return NextResponse.json({
+      success: true,
+      message: 'Success',
+      data: { questions }
+    });
   } catch (error) {
-    return errorResponse(error as Error);
+    console.error('Error fetching questions:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Failed to fetch questions',
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -45,22 +103,46 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-
-    // 获取请求数据
     const data = await request.json();
-
-    // 验证数据
-    const errors = validateQuestion(data);
-    if (errors) {
-      return validationErrorResponse(errors);
+    
+    // 验证请求数据
+    const validationResult = validateQuestion(data);
+    if (!validationResult) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "验证失败：无效的请求数据",
+        },
+        { status: 400 }
+      );
+    }
+    
+    if (!validationResult.isValid) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: validationResult.message || "验证失败",
+        },
+        { status: 400 }
+      );
     }
 
-    // 创建新题目
     const question = await Question.create(data);
-
-    return successResponse({ question }, '题目创建成功');
+    
+    return NextResponse.json({
+      success: true,
+      message: '题目创建成功',
+      data: { question }
+    });
   } catch (error) {
-    return errorResponse(error as Error);
+    console.error('Error creating question:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Failed to create question',
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -94,6 +176,35 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json(
       { success: false, error: error.message },
       { status: 400 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    await dbConnect();
+    const data = await request.json();
+    const operations = data.map((update: any) => ({
+      updateOne: {
+        filter: { _id: update._id },
+        update: { $set: update }
+      }
+    }));
+
+    const result = await Question.bulkWrite(operations);
+    
+    return NextResponse.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Error updating questions:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'Failed to update questions',
+      },
+      { status: 500 }
     );
   }
 } 

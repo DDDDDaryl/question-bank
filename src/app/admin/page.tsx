@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { QuestionType, Difficulty, IQuestion } from '@/models/Question';
 import QuestionListItem from '@/components/QuestionListItem';
 import QuestionForm from '@/components/QuestionForm';
@@ -18,11 +18,7 @@ export default function AdminPage() {
   const [editingQuestion, setEditingQuestion] = useState<IQuestion | null>(null);
   const [viewingQuestion, setViewingQuestion] = useState<IQuestion | null>(null);
 
-  useEffect(() => {
-    fetchQuestions();
-  }, [searchQuery, selectedType, selectedDifficulty, selectedTag]);
-
-  const fetchQuestions = async () => {
+  const fetchQuestions = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -46,7 +42,11 @@ export default function AdminPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, selectedType, selectedDifficulty, selectedTag]);
+
+  useEffect(() => {
+    fetchQuestions();
+  }, [fetchQuestions]);
 
   const handleSubmit = async (data: Omit<IQuestion, '_id' | 'createdAt' | 'updatedAt'>) => {
     try {
