@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 
 interface Question {
   _id: string;
@@ -13,42 +13,27 @@ interface Question {
   createdAt: string;
 }
 
-export default function AdminPage() {
-  const router = useRouter();
+export default function QuestionsPage() {
+  const searchParams = useSearchParams();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [allTags, setAllTags] = useState<string[]>([]);
 
   useEffect(() => {
     fetchQuestions();
-  }, []);
+  }, [searchParams]);
 
   const fetchQuestions = async () => {
     try {
-      const response = await fetch('/api/questions');
+      const queryString = searchParams.toString();
+      const response = await fetch(`/api/questions${queryString ? `?${queryString}` : ''}`);
       const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.message || '获取题目失败');
       }
 
-      if (Array.isArray(data.questions)) {
-        setQuestions(data.questions);
-        // 提取所有不重复的标签
-        const tags = data.questions.reduce((acc: string[], q: Question) => {
-          q.tags.forEach(tag => {
-            if (!acc.includes(tag)) {
-              acc.push(tag);
-            }
-          });
-          return acc;
-        }, []);
-        setAllTags(tags);
-      } else {
-        setQuestions([]);
-        setAllTags([]);
-      }
+      setQuestions(data.questions);
     } catch (err) {
       setError(err instanceof Error ? err.message : '获取题目失败');
     } finally {
@@ -79,26 +64,6 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">题库管理</h1>
-          <div className="mt-4">
-            <h2 className="text-lg font-medium text-gray-700">标签统计</h2>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {allTags.map(tag => (
-                <span
-                  key={tag}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800"
-                >
-                  {tag}
-                  <span className="ml-2 text-blue-600">
-                    {questions.filter(q => q.tags.includes(tag)).length}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
         <div className="bg-white shadow overflow-hidden sm:rounded-md">
           <ul className="divide-y divide-gray-200">
             {questions.map((question) => (

@@ -1,6 +1,47 @@
-# 题库管理系统
+# 题库系统
 
-这是一个基于 Next.js 14 和 MongoDB 构建的题库管理系统。
+一个基于 Next.js 14 和 MongoDB 的在线题库系统。
+
+## 环境要求
+
+- Node.js 18+
+- MongoDB
+
+## 环境变量
+
+在部署到 Vercel 之前，请确保设置以下环境变量：
+
+- `MONGODB_URI`: MongoDB 连接字符串
+- `JWT_SECRET`: JWT 加密密钥
+
+## 开发
+
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+```
+
+## 部署
+
+本项目可以直接部署到 Vercel：
+
+1. Fork 本仓库
+2. 在 Vercel 中导入项目
+3. 配置环境变量
+4. 部署
+
+## 技术栈
+
+- Next.js 14
+- React 18
+- TypeScript
+- Tailwind CSS
+- MongoDB
+- Mongoose
+- JWT Authentication
 
 ## 功能特点
 
@@ -10,16 +51,6 @@
 - 题目搜索和筛选
 - 完整的 CRUD 操作
 - 响应式设计
-
-## 技术栈
-
-- Next.js 14
-- React 18
-- TypeScript
-- MongoDB
-- Mongoose
-- TailwindCSS
-- Heroicons
 
 ## 开始使用
 

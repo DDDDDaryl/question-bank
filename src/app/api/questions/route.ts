@@ -1,89 +1,91 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateQuestion } from '@/lib/validation';
-import QuestionModel from '@/models/mongodb/Question';
+import QuestionModel from '@/models/Question';
 import dbConnect from '@/lib/mongodb';
 import { ZodError } from 'zod';
+import { withAuth } from '@/lib/auth';
+import jwt from 'jsonwebtoken';
+import UserModel from '@/models/User';
+import { connectDB } from '@/lib/db';
+import { User } from '@/models/User';
+import { Question } from '@/models/Question';
+import { getToken } from '@/lib/auth';
 
 // GET /api/questions
-export async function GET(request: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
-    await dbConnect();
+    // 确保数据库连接
+    await connectDB();
 
-    // 获取查询参数
-    const { searchParams } = new URL(request.url);
-    const search = searchParams.get('search');
+    const { searchParams } = new URL(req.url);
     const type = searchParams.get('type');
     const difficulty = searchParams.get('difficulty');
     const tag = searchParams.get('tag');
+    const search = searchParams.get('search');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
 
     // 构建查询条件
     const query: any = {};
-    if (search) {
-      query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { content: { $regex: search, $options: 'i' } }
-      ];
-    }
-    if (type) {
-      query.type = type;
-    }
-    if (difficulty) {
-      query.difficulty = difficulty;
-    }
-    if (tag) {
-      query.tags = tag;
-    }
+    if (type) query.type = type;
+    if (difficulty) query.difficulty = difficulty;
+    if (tag) query.tags = tag;
+    if (search) query.title = { $regex: search, $options: 'i' };
 
-    // 获取题目列表
-    const questions = await QuestionModel.find(query).sort({ createdAt: -1 });
+    // 获取题目总数
+    const total = await Question.countDocuments(query);
 
-    return NextResponse.json(questions);
+    // 获取分页数据
+    const questions = await Question.find(query)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    return NextResponse.json({
+      questions,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
-    console.error('获取题目列表失败:', error);
+    console.error('获取题目失败:', error);
     return NextResponse.json(
-      { success: false, message: '获取题目列表失败' },
+      { message: '获取题目失败，请稍后重试' },
       { status: 500 }
     );
   }
 }
 
 // POST /api/questions
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const data = await request.json();
+    // 确保数据库连接
+    await connectDB();
 
-    // 验证数据
-    try {
-      validateQuestion(data);
-    } catch (error) {
-      if (error instanceof ZodError) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            message: '验证失败',
-            errors: error.errors.map(err => ({
-              path: err.path.join('.'),
-              message: err.message
-            }))
-          },
-          { status: 400 }
-        );
-      }
-      throw error;
+    // 验证用户身份
+    const token = await getToken();
+    if (!token) {
+      return NextResponse.json(
+        { message: '未授权' },
+        { status: 401 }
+      );
     }
 
-    // 创建题目
-    await dbConnect();
-    const question = await QuestionModel.create(data);
+    const data = await req.json();
+    const question = await Question.create({
+      ...data,
+      createdBy: token._id,
+    });
 
-    return NextResponse.json(
-      { success: true, data: { question } },
-      { status: 201 }
-    );
+    return NextResponse.json({
+      message: '创建成功',
+      question,
+    });
   } catch (error) {
     console.error('创建题目失败:', error);
     return NextResponse.json(
-      { success: false, message: '创建题目失败' },
+      { message: '创建题目失败，请稍后重试' },
       { status: 500 }
     );
   }

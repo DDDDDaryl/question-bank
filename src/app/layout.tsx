@@ -1,21 +1,26 @@
-import './globals.css'
-import { Inter } from 'next/font/google'
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
+import Navbar from '@/components/layout/Navbar';
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: '题库系统',
-  description: '一个现代化的题库管理系统',
-}
+  description: '专业的题库管理和练习系统',
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="zh">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <Navbar />
+        <main>{children}</main>
+      </body>
     </html>
-  )
+  );
 } 

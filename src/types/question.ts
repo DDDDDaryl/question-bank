@@ -1,17 +1,41 @@
 export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE';
-export type Difficulty = 'EASY' | 'MEDIUM' | 'HARD';
+export type DifficultyLevel = 'EASY' | 'MEDIUM' | 'HARD';
+
+export interface QuestionOption {
+  content: string;
+  isCorrect: boolean;
+}
 
 export interface Question {
-  _id?: string;
+  _id: string;
   title: string;
-  type: QuestionType;
   content: string;
-  options: string[];
-  answer: string | string[];
-  explanation?: string;
-  difficulty: Difficulty;
+  type: QuestionType;
+  difficulty: DifficultyLevel;
+  options: QuestionOption[];
+  explanation: string;
   tags: string[];
-  source?: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface CreateQuestionData {
+  title: string;
+  content: string;
+  type: QuestionType;
+  difficulty: DifficultyLevel;
+  options: QuestionOption[];
+  explanation: string;
+  tags: string[];
+}
+
+export interface UpdateQuestionData {
+  title?: string;
+  content?: string;
+  type?: QuestionType;
+  difficulty?: DifficultyLevel;
+  options?: QuestionOption[];
+  explanation?: string;
+  tags?: string[];
 } 
