@@ -7,7 +7,6 @@ import { withAuth } from '@/lib/auth';
 import jwt from 'jsonwebtoken';
 import { User } from '@/models/User';
 import { getToken } from '@/lib/auth';
-import connectToDatabase from '@/lib/mongodb';
 
 // GET /api/questions
 export async function GET(req: NextRequest) {
