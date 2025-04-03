@@ -51,7 +51,12 @@ export default function TopicsPracticePage() {
       }
       const data = await response.json();
       if (data.questions && data.questions.length > 0) {
-        setQuestions(data.questions);
+        // 确保每个题目都有正确的选项结构
+        const formattedQuestions = data.questions.map((question: Question) => ({
+          ...question,
+          options: Array.isArray(question.options) ? question.options : []
+        }));
+        setQuestions(formattedQuestions);
         setIsPracticing(true);
       } else {
         alert('该主题下暂无题目');

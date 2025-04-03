@@ -59,26 +59,33 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
   };
 
   const renderOptions = () => {
-    if (!currentQuestion?.options) return null;
+    if (!currentQuestion?.options) {
+      console.log('No options found:', currentQuestion);
+      return null;
+    }
+    console.log('Rendering options:', currentQuestion.options);
     return (
       <div className="flex flex-col gap-4 w-full mt-4">
-        {currentQuestion.options.map((option, index) => (
-          <button
-            key={index}
-            onClick={() => handleAnswerSelect(index)}
-            disabled={selectedAnswers.length > 0}
-            className={`w-full p-4 text-left rounded-lg border ${
-              selectedAnswers.includes(index)
-                ? option.isCorrect
-                  ? 'bg-green-100 border-green-500'
-                  : 'bg-red-100 border-red-500'
-                : 'hover:bg-gray-100 border-gray-200'
-            } transition-colors duration-200`}
-          >
-            <span className="font-medium mr-2">{String.fromCharCode(65 + index)}.</span>
-            {option.content}
-          </button>
-        ))}
+        {currentQuestion.options.map((option, index) => {
+          console.log('Rendering option:', option);
+          return (
+            <button
+              key={index}
+              onClick={() => handleAnswerSelect(index)}
+              disabled={selectedAnswers.length > 0}
+              className={`w-full p-4 text-left rounded-lg border ${
+                selectedAnswers.includes(index)
+                  ? option.isCorrect
+                    ? 'bg-green-100 border-green-500'
+                    : 'bg-red-100 border-red-500'
+                  : 'hover:bg-gray-100 border-gray-200'
+              } transition-colors duration-200 flex items-center`}
+            >
+              <span className="font-medium mr-4 text-gray-500">{String.fromCharCode(65 + index)}.</span>
+              <span className="flex-1">{option.content}</span>
+            </button>
+          );
+        })}
       </div>
     );
   };
