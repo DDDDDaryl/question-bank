@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
-import Question from '@/models/Question';
+import { Question } from '@/models/Question';
 import Mistake from '@/models/Mistake';
 
 export async function GET() {

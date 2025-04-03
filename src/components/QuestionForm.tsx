@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { Question, QuestionType, Difficulty } from '@/types/question';
+import type { Question, QuestionType, DifficultyLevel, QuestionOption } from '@/types/question';
 
 interface QuestionFormProps {
   question?: Question;
@@ -12,12 +12,11 @@ export default function QuestionForm({ question, onSubmit, onCancel }: QuestionF
     title: '',
     type: 'SINGLE_CHOICE',
     content: '',
-    options: [''],
-    answer: '',
+    options: [{ content: '', isCorrect: false }],
     explanation: '',
     difficulty: 'MEDIUM',
     tags: [],
-    source: ''
+    createdBy: ''
   });
 
   useEffect(() => {
@@ -27,11 +26,10 @@ export default function QuestionForm({ question, onSubmit, onCancel }: QuestionF
         type: question.type,
         content: question.content,
         options: question.options,
-        answer: question.answer,
-        explanation: question.explanation || '',
+        explanation: question.explanation,
         difficulty: question.difficulty,
         tags: question.tags,
-        source: question.source || ''
+        createdBy: question.createdBy
       });
     }
   }, [question]);
@@ -43,12 +41,26 @@ export default function QuestionForm({ question, onSubmit, onCancel }: QuestionF
 
   const handleOptionChange = (index: number, value: string) => {
     const newOptions = [...formData.options];
-    newOptions[index] = value;
+    newOptions[index] = { ...newOptions[index], content: value };
+    setFormData({ ...formData, options: newOptions });
+  };
+
+  const handleOptionCorrectChange = (index: number, isCorrect: boolean) => {
+    const newOptions = [...formData.options];
+    if (formData.type === 'SINGLE_CHOICE') {
+      // 单选题时，只能有一个正确答案
+      newOptions.forEach((option, i) => {
+        option.isCorrect = i === index ? isCorrect : false;
+      });
+    } else {
+      // 多选题时，可以有多个正确答案
+      newOptions[index] = { ...newOptions[index], isCorrect };
+    }
     setFormData({ ...formData, options: newOptions });
   };
 
   const addOption = () => {
-    setFormData({ ...formData, options: [...formData.options, ''] });
+    setFormData({ ...formData, options: [...formData.options, { content: '', isCorrect: false }] });
   };
 
   const removeOption = (index: number) => {
@@ -98,8 +110,15 @@ export default function QuestionForm({ question, onSubmit, onCancel }: QuestionF
           {formData.options.map((option, index) => (
             <div key={index} className="flex items-center space-x-2">
               <input
+                type={formData.type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
+                checked={option.isCorrect}
+                onChange={(e) => handleOptionCorrectChange(index, e.target.checked)}
+                name="options"
+                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <input
                 type="text"
-                value={option}
+                value={option.content}
                 onChange={(e) => handleOptionChange(index, e.target.value)}
                 className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                 required
@@ -126,43 +145,6 @@ export default function QuestionForm({ question, onSubmit, onCancel }: QuestionF
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">答案</label>
-        {formData.type === 'SINGLE_CHOICE' ? (
-          <select
-            value={formData.answer as string}
-            onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-            required
-          >
-            {formData.options.map((_, index) => (
-              <option key={index} value={index.toString()}>
-                选项 {index + 1}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <div className="space-y-2">
-            {formData.options.map((_, index) => (
-              <label key={index} className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={(formData.answer as string[]).includes(index.toString())}
-                  onChange={(e) => {
-                    const newAnswer = e.target.checked
-                      ? [...(formData.answer as string[]), index.toString()]
-                      : (formData.answer as string[]).filter((a) => a !== index.toString());
-                    setFormData({ ...formData, answer: newAnswer });
-                  }}
-                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="ml-2">选项 {index + 1}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div>
         <label className="block text-sm font-medium text-gray-700">解释</label>
         <textarea
           value={formData.explanation}
@@ -176,7 +158,7 @@ export default function QuestionForm({ question, onSubmit, onCancel }: QuestionF
         <label className="block text-sm font-medium text-gray-700">难度</label>
         <select
           value={formData.difficulty}
-          onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as Difficulty })}
+          onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as DifficultyLevel })}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         >
           <option value="EASY">简单</option>
@@ -196,27 +178,17 @@ export default function QuestionForm({ question, onSubmit, onCancel }: QuestionF
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700">来源</label>
-        <input
-          type="text"
-          value={formData.source}
-          onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-        />
-      </div>
-
-      <div className="flex justify-end space-x-4">
+      <div className="flex justify-end space-x-3">
         <button
           type="button"
           onClick={onCancel}
-          className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
           取消
         </button>
         <button
           type="submit"
-          className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          className="rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
           保存
         </button>

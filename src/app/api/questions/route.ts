@@ -1,93 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateQuestion } from '@/lib/validation';
-import QuestionModel from '@/models/Question';
+import { Question } from '@/models/Question';
 import dbConnect from '@/lib/mongodb';
 import { ZodError } from 'zod';
 import { withAuth } from '@/lib/auth';
 import jwt from 'jsonwebtoken';
-import UserModel from '@/models/User';
-import { connectDB } from '@/lib/db';
 import { User } from '@/models/User';
-import { Question } from '@/models/Question';
 import { getToken } from '@/lib/auth';
+import connectToDatabase from '@/lib/mongodb';
 
 // GET /api/questions
 export async function GET(req: NextRequest) {
   try {
-    // 确保数据库连接
-    await connectDB();
-
-    const { searchParams } = new URL(req.url);
-    const type = searchParams.get('type');
-    const difficulty = searchParams.get('difficulty');
-    const tag = searchParams.get('tag');
-    const search = searchParams.get('search');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-
-    // 构建查询条件
-    const query: any = {};
-    if (type) query.type = type;
-    if (difficulty) query.difficulty = difficulty;
-    if (tag) query.tags = tag;
-    if (search) query.title = { $regex: search, $options: 'i' };
-
-    // 获取题目总数
-    const total = await Question.countDocuments(query);
-
-    // 获取分页数据
-    const questions = await Question.find(query)
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .sort({ createdAt: -1 });
-
-    return NextResponse.json({
-      questions,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-    });
+    await dbConnect();
+    const questions = await Question.find().populate('createdBy', 'username');
+    return NextResponse.json(questions);
   } catch (error) {
     console.error('获取题目失败:', error);
-    return NextResponse.json(
-      { message: '获取题目失败，请稍后重试' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '获取题目失败' }, { status: 500 });
   }
 }
 
 // POST /api/questions
 export async function POST(req: NextRequest) {
   try {
-    // 确保数据库连接
-    await connectDB();
-
-    // 验证用户身份
+    await dbConnect();
     const token = await getToken();
     if (!token) {
-      return NextResponse.json(
-        { message: '未授权' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: '未授权' }, { status: 401 });
     }
 
     const data = await req.json();
+    const validatedData = validateQuestion(data);
     const question = await Question.create({
-      ...data,
-      createdBy: token._id,
+      ...validatedData,
+      createdBy: token._id
     });
-
-    return NextResponse.json({
-      message: '创建成功',
-      question,
-    });
+    return NextResponse.json(question);
   } catch (error) {
     console.error('创建题目失败:', error);
-    return NextResponse.json(
-      { message: '创建题目失败，请稍后重试' },
-      { status: 500 }
-    );
+    if (error instanceof ZodError) {
+      return NextResponse.json({ error: '数据验证失败', details: error.errors }, { status: 400 });
+    }
+    return NextResponse.json({ error: '创建题目失败' }, { status: 500 });
   }
 }
 
@@ -111,7 +66,7 @@ export async function PUT(req: NextRequest) {
       }
     }));
     
-    const result = await QuestionModel.bulkWrite(operations);
+    const result = await Question.bulkWrite(operations);
     
     return NextResponse.json({
       success: true,
@@ -136,7 +91,7 @@ export async function PATCH(request: NextRequest) {
       }
     }));
 
-    const result = await QuestionModel.bulkWrite(operations);
+    const result = await Question.bulkWrite(operations);
     
     return NextResponse.json({
       success: true,

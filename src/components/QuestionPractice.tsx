@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Question } from '@/types/question';
+import { Question, QuestionOption } from '@/types/question';
 
 interface QuestionPracticeProps {
   questions: Question[];
@@ -10,21 +10,21 @@ interface QuestionPracticeProps {
 
 export default function QuestionPractice({ questions, onComplete }: QuestionPracticeProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<string[]>([]);
+  const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [results, setResults] = useState<Array<{ questionId: string; correct: boolean }>>([]);
   const [showExplanation, setShowExplanation] = useState(false);
 
   const currentQuestion = questions[currentIndex];
   const isLastQuestion = currentIndex === questions.length - 1;
 
-  const handleAnswerSelect = (option: string) => {
+  const handleAnswerSelect = (index: number) => {
     if (currentQuestion.type === 'SINGLE_CHOICE') {
-      setSelectedAnswers([option]);
+      setSelectedAnswers([index]);
     } else {
       setSelectedAnswers(prev => 
-        prev.includes(option) 
-          ? prev.filter(a => a !== option)
-          : [...prev, option]
+        prev.includes(index) 
+          ? prev.filter(a => a !== index)
+          : [...prev, index]
       );
     }
   };
@@ -35,11 +35,14 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
       return;
     }
 
+    const correctAnswers = currentQuestion.options
+      .map((option, index) => option.isCorrect ? index : -1)
+      .filter(index => index !== -1);
+
     const isCorrect = currentQuestion.type === 'SINGLE_CHOICE'
-      ? selectedAnswers[0] === currentQuestion.answer
-      : Array.isArray(currentQuestion.answer) &&
-        selectedAnswers.length === currentQuestion.answer.length &&
-        selectedAnswers.every(a => currentQuestion.answer.includes(a));
+      ? selectedAnswers[0] === correctAnswers[0]
+      : selectedAnswers.length === correctAnswers.length &&
+        selectedAnswers.every(a => correctAnswers.includes(a));
 
     setResults([...results, { questionId: currentQuestion._id, correct: isCorrect }]);
     setShowExplanation(true);
@@ -74,18 +77,18 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
             <label
               key={index}
               className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors
-                ${selectedAnswers.includes(option)
+                ${selectedAnswers.includes(index)
                   ? 'bg-blue-50 border-blue-500'
                   : 'hover:bg-gray-50 border-gray-200'}`}
             >
               <input
                 type={currentQuestion.type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
                 name="answer"
-                checked={selectedAnswers.includes(option)}
-                onChange={() => handleAnswerSelect(option)}
+                checked={selectedAnswers.includes(index)}
+                onChange={() => handleAnswerSelect(index)}
                 className="mr-3"
               />
-              <span>{option}</span>
+              <span>{option.content}</span>
             </label>
           ))}
         </div>
@@ -113,6 +116,18 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
               {results[results.length - 1].correct ? '回答正确！' : '回答错误'}
             </h3>
             <p className="mt-2 text-gray-700">{currentQuestion.explanation}</p>
+            <div className="mt-4">
+              <h4 className="font-medium text-gray-700 mb-2">正确答案：</h4>
+              <div className="space-y-2">
+                {currentQuestion.options.map((option, index) => (
+                  option.isCorrect && (
+                    <div key={index} className="text-green-700">
+                      {String.fromCharCode(65 + index)}. {option.content}
+                    </div>
+                  )
+                ))}
+              </div>
+            </div>
           </div>
           <button
             onClick={handleNext}

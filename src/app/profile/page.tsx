@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserProfile, UpdateProfileData } from '@/types/user';
 
@@ -22,11 +22,7 @@ export default function ProfilePage() {
     '社会发展'
   ]);
 
-  useEffect(() => {
-    fetchUserProfile();
-  }, []);
-
-  const fetchUserProfile = async () => {
+  const fetchUserProfile = useCallback(async () => {
     try {
       const response = await fetch('/api/user/profile');
       const data = await response.json();
@@ -45,7 +41,11 @@ export default function ProfilePage() {
       setError(err instanceof Error ? err.message : '获取用户信息失败');
       router.push('/auth');
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    fetchUserProfile();
+  }, [fetchUserProfile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

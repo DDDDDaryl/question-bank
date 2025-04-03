@@ -54,13 +54,14 @@ export default function QuestionListItem({ question, onEdit, onDelete }: Questio
             {question.options.map((option, index) => (
               <div key={index} className="flex items-start">
                 <span className="text-gray-500 mr-2">{String.fromCharCode(65 + index)}.</span>
-                <span className="text-gray-700">{option}</span>
+                <div className="flex items-center">
+                  <span className="text-gray-700">{option.content}</span>
+                  {option.isCorrect && (
+                    <span className="ml-2 text-green-600">✓</span>
+                  )}
+                </div>
               </div>
             ))}
-          </div>
-          <div className="mt-4">
-            <p className="text-sm font-medium text-gray-500">答案：</p>
-            <p className="text-gray-700">{Array.isArray(question.answer) ? question.answer.join(', ') : question.answer}</p>
           </div>
           {question.explanation && (
             <div className="mt-4">
@@ -77,7 +78,7 @@ export default function QuestionListItem({ question, onEdit, onDelete }: Questio
             编辑
           </button>
           <button
-            onClick={() => onDelete(question._id as string)}
+            onClick={() => onDelete(question._id)}
             className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
             删除

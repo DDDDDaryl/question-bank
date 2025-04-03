@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
-import type { Question } from '@/types/question';
+import type { Question as QuestionType } from '@/types/question';
 
-const questionSchema = new mongoose.Schema<Question>({
+const questionSchema = new mongoose.Schema<QuestionType>({
   title: { type: String, required: true },
   content: { type: String, required: true },
   type: { type: String, enum: ['SINGLE_CHOICE', 'MULTIPLE_CHOICE'], required: true },
@@ -12,9 +12,9 @@ const questionSchema = new mongoose.Schema<Question>({
   }],
   explanation: { type: String, required: true },
   tags: [{ type: String }],
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  createdAt: { type: Date, default: Date.now },
-  updatedAt: { type: Date, default: Date.now }
+  createdBy: { type: String, required: true },
+}, {
+  timestamps: true
 });
 
 // 更新时自动更新updatedAt字段
@@ -23,4 +23,4 @@ questionSchema.pre('save', function(next) {
   next();
 });
 
-export const Question = mongoose.models.Question || mongoose.model<Question>('Question', questionSchema); 
+export const Question = mongoose.models.Question || mongoose.model<QuestionType>('Question', questionSchema); 

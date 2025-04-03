@@ -28,6 +28,7 @@ export interface CreateQuestionData {
   options: QuestionOption[];
   explanation: string;
   tags: string[];
+  createdBy: string;
 }
 
 export interface UpdateQuestionData {
@@ -38,4 +39,15 @@ export interface UpdateQuestionData {
   options?: QuestionOption[];
   explanation?: string;
   tags?: string[];
+}
+
+export interface ImportQuestionData {
+  title: string;
+  content: string;
+  type: QuestionType;
+  difficulty: DifficultyLevel;
+  options: QuestionOption[];
+  explanation: string;
+  tags: string[];
+  createdBy: string;
 } 
