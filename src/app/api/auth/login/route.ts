@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { User } from '@/models/User';
+import { UserModel } from '@/models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     // 查找用户
-    const user = await User.findOne({ email });
+    const user = await UserModel.findOne({ email });
     if (!user) {
       return NextResponse.json(
         { message: '邮箱或密码错误' },

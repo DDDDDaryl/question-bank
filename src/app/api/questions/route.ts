@@ -5,7 +5,7 @@ import dbConnect from '@/lib/mongodb';
 import { ZodError } from 'zod';
 import { withAuth } from '@/lib/auth';
 import jwt from 'jsonwebtoken';
-import { User } from '@/models/User';
+import { UserModel } from '@/models/User';
 import { getToken } from '@/lib/auth';
 
 // GET /api/questions

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Question, QuestionOption } from '@/types/question';
 
 interface QuestionPracticeProps {
@@ -13,9 +13,20 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
   const [results, setResults] = useState<Array<{ questionId: string; correct: boolean }>>([]);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const currentQuestion = questions[currentIndex];
   const isLastQuestion = currentIndex === questions.length - 1;
+
+  useEffect(() => {
+    if (currentQuestion) {
+      setIsLoading(true);
+      // 重置选项状态
+      setSelectedAnswers([]);
+      setShowExplanation(false);
+      setIsLoading(false);
+    }
+  }, [currentQuestion]);
 
   const handleAnswerSelect = (index: number) => {
     if (currentQuestion.type === 'SINGLE_CHOICE') {
@@ -59,40 +70,44 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
   };
 
   const renderOptions = () => {
-    console.log('当前题目:', currentQuestion);
-    if (!currentQuestion?.options) {
-      console.error('没有找到选项:', currentQuestion);
-      return null;
+    if (isLoading) {
+      return <div className="text-center py-4">加载中...</div>;
     }
-    
-    if (!Array.isArray(currentQuestion.options)) {
-      console.error('选项不是数组:', currentQuestion.options);
-      return null;
+
+    if (!currentQuestion?.options || !Array.isArray(currentQuestion.options)) {
+      console.error('选项格式错误:', currentQuestion);
+      return <div className="text-center py-4 text-red-500">选项加载失败</div>;
     }
-    
-    console.log('渲染选项数组:', currentQuestion.options);
+
     return (
       <div className="flex flex-col gap-4 w-full mt-4">
         {currentQuestion.options.map((option, index) => {
-          console.log(`渲染第 ${index + 1} 个选项:`, option);
           if (!option || typeof option.content === 'undefined') {
             console.error(`选项 ${index + 1} 格式错误:`, option);
             return null;
           }
+
+          const isSelected = selectedAnswers.includes(index);
+          const showResult = showExplanation && isSelected;
+          const isCorrect = showResult && option.isCorrect;
+
           return (
             <button
               key={index}
-              onClick={() => handleAnswerSelect(index)}
-              disabled={selectedAnswers.length > 0}
-              className={`w-full p-4 text-left rounded-lg border ${
-                selectedAnswers.includes(index)
-                  ? option.isCorrect
-                    ? 'bg-green-100 border-green-500'
+              onClick={() => !showExplanation && handleAnswerSelect(index)}
+              disabled={showExplanation}
+              className={`w-full p-4 text-left rounded-lg border transition-colors duration-200 flex items-center
+                ${showResult 
+                  ? isCorrect 
+                    ? 'bg-green-100 border-green-500' 
                     : 'bg-red-100 border-red-500'
-                  : 'hover:bg-gray-100 border-gray-200'
-              } transition-colors duration-200 flex items-center`}
+                  : isSelected
+                  ? 'bg-blue-100 border-blue-500'
+                  : 'hover:bg-gray-100 border-gray-200'}`}
             >
-              <span className="font-medium mr-4 text-gray-500">{String.fromCharCode(65 + index)}.</span>
+              <span className="font-medium mr-4 text-gray-500">
+                {String.fromCharCode(65 + index)}.
+              </span>
               <span className="flex-1">{option.content}</span>
             </button>
           );

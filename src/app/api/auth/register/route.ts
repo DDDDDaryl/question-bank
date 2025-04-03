@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
-import { User } from '@/models/User';
+import { UserModel } from '@/models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     // 检查用户名是否已存在
-    const existingUsername = await User.findOne({ username });
+    const existingUsername = await UserModel.findOne({ username });
     if (existingUsername) {
       return NextResponse.json(
         { message: '用户名已被使用' },
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 检查邮箱是否已存在
-    const existingEmail = await User.findOne({ email });
+    const existingEmail = await UserModel.findOne({ email });
     if (existingEmail) {
       return NextResponse.json(
         { message: '邮箱已被注册' },
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     // 创建新用户
-    const user = await User.create({
+    const user = await UserModel.create({
       username,
       email,
       password: hashedPassword,

@@ -19,11 +19,10 @@ async function dbConnect() {
   if (!cached.mongoose.promise) {
     const opts = {
       bufferCommands: true,
+      maxPoolSize: 10,
     };
 
-    cached.mongoose.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      return mongoose;
-    });
+    cached.mongoose.promise = mongoose.connect(MONGODB_URI, opts);
   }
 
   try {
