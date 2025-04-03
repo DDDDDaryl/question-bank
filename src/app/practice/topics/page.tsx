@@ -21,21 +21,22 @@ export default function TopicsPracticePage() {
   const fetchTags = async () => {
     try {
       const response = await fetch('/api/questions');
-      const data = await response.json();
-      if (data.success) {
-        // 从所有题目中提取唯一的标签
-        const allTags = data.questions.reduce((acc: string[], q: Question) => {
-          q.tags.forEach(tag => {
-            if (!acc.includes(tag)) {
-              acc.push(tag);
-            }
-          });
-          return acc;
-        }, []);
-        setTags(allTags.sort());
+      if (!response.ok) {
+        throw new Error('获取题目失败');
       }
+      const data = await response.json();
+      // 从所有题目中提取唯一的标签
+      const allTags = data.questions.reduce((acc: string[], q: Question) => {
+        q.tags.forEach(tag => {
+          if (!acc.includes(tag)) {
+            acc.push(tag);
+          }
+        });
+        return acc;
+      }, []);
+      setTags(allTags.sort());
     } catch (error) {
-      console.error('Failed to fetch tags:', error);
+      console.error('获取标签失败:', error);
     } finally {
       setIsLoading(false);
     }
@@ -44,14 +45,20 @@ export default function TopicsPracticePage() {
   const startPractice = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/questions?tag=${selectedTag}`);
+      const response = await fetch(`/api/questions?tag=${encodeURIComponent(selectedTag)}`);
+      if (!response.ok) {
+        throw new Error('获取题目失败');
+      }
       const data = await response.json();
-      if (data.success) {
+      if (data.questions && data.questions.length > 0) {
         setQuestions(data.questions);
         setIsPracticing(true);
+      } else {
+        alert('该主题下暂无题目');
       }
     } catch (error) {
-      console.error('Failed to fetch questions:', error);
+      console.error('获取题目失败:', error);
+      alert('获取题目失败，请稍后重试');
     } finally {
       setIsLoading(false);
     }
@@ -65,15 +72,18 @@ export default function TopicsPracticePage() {
     
     if (wrongQuestions.length > 0) {
       try {
-        await fetch('/api/mistakes', {
+        const response = await fetch('/api/mistakes', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ questionIds: wrongQuestions }),
         });
+        if (!response.ok) {
+          throw new Error('保存错题失败');
+        }
       } catch (error) {
-        console.error('Failed to save mistakes:', error);
+        console.error('保存错题失败:', error);
       }
     }
 
@@ -112,20 +122,24 @@ export default function TopicsPracticePage() {
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-xl font-semibold mb-4">选择练习主题</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {tags.map(tag => (
-              <button
-                key={tag}
-                onClick={() => setSelectedTag(tag)}
-                className={`p-3 rounded-lg text-center transition-colors
-                  ${selectedTag === tag
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
+          {tags.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {tags.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => setSelectedTag(tag)}
+                  className={`p-3 rounded-lg text-center transition-colors
+                    ${selectedTag === tag
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center text-gray-500">暂无可用的练习主题</div>
+          )}
         </div>
         
         {selectedTag && (
