@@ -79,17 +79,20 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
       return <div className="text-center py-4 text-red-500">选项加载失败</div>;
     }
 
+    if (currentQuestion.options.length === 0) {
+      return <div className="text-center py-4 text-gray-500">暂无选项</div>;
+    }
+
     return (
       <div className="flex flex-col gap-4 w-full mt-4">
         {currentQuestion.options.map((option, index) => {
-          if (!option || typeof option.content === 'undefined') {
-            console.error(`选项 ${index + 1} 格式错误:`, option);
-            return null;
-          }
+          // 确保选项有有效的内容
+          const content = option?.content || `选项 ${index + 1}`;
+          const isCorrect = !!option?.isCorrect;
 
           const isSelected = selectedAnswers.includes(index);
           const showResult = showExplanation && isSelected;
-          const isCorrect = showResult && option.isCorrect;
+          const isAnswerCorrect = showResult && isCorrect;
 
           return (
             <button
@@ -98,7 +101,7 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
               disabled={showExplanation}
               className={`w-full p-4 text-left rounded-lg border transition-colors duration-200 flex items-center
                 ${showResult 
-                  ? isCorrect 
+                  ? isAnswerCorrect 
                     ? 'bg-green-100 border-green-500' 
                     : 'bg-red-100 border-red-500'
                   : isSelected
@@ -108,7 +111,7 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
               <span className="font-medium mr-4 text-gray-500">
                 {String.fromCharCode(65 + index)}.
               </span>
-              <span className="flex-1">{option.content}</span>
+              <span className="flex-1">{content}</span>
             </button>
           );
         })}

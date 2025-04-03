@@ -45,26 +45,36 @@ export async function GET(req: NextRequest) {
 
     // 确保每个问题的选项都有正确的结构
     const formattedQuestions = questions.map(question => {
-      console.log('原始问题数据:', question);
       const formattedOptions = Array.isArray(question.options) 
         ? question.options.map(option => {
-            console.log('处理选项:', option);
+            // 如果选项是字符串，转换为正确的格式
             if (typeof option === 'string') {
               return {
                 content: option,
                 isCorrect: false
               };
             }
+            // 如果选项是对象，确保有正确的属性
+            if (typeof option === 'object' && option !== null) {
+              return {
+                content: option.content || '',
+                isCorrect: typeof option.isCorrect === 'boolean' ? option.isCorrect : false
+              };
+            }
+            // 如果选项格式无效，返回默认值
             return {
-              content: option.content || '',
-              isCorrect: !!option.isCorrect
+              content: '',
+              isCorrect: false
             };
           })
         : [];
-      console.log('格式化后的选项:', formattedOptions);
+
       return {
         ...question,
-        options: formattedOptions
+        options: formattedOptions.map((option, index) => ({
+          content: option.content || `选项 ${index + 1}`,
+          isCorrect: !!option.isCorrect
+        }))
       };
     });
 
