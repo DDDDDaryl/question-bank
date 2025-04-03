@@ -1,15 +1,17 @@
 import mongoose from 'mongoose';
 import type { Question as QuestionType } from '@/types/question';
 
+const questionOptionSchema = new mongoose.Schema({
+  content: { type: String, required: true },
+  isCorrect: { type: Boolean, required: true }
+}, { _id: false });
+
 const questionSchema = new mongoose.Schema<QuestionType>({
   title: { type: String, required: true },
   content: { type: String, required: true },
   type: { type: String, enum: ['SINGLE_CHOICE', 'MULTIPLE_CHOICE'], required: true },
   difficulty: { type: String, enum: ['EASY', 'MEDIUM', 'HARD'], required: true },
-  options: [{ 
-    content: { type: String, required: true },
-    isCorrect: { type: Boolean, required: true }
-  }],
+  options: [questionOptionSchema],
   explanation: { type: String, required: true },
   tags: [{ type: String }],
   createdBy: { type: String, required: true },

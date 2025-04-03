@@ -46,10 +46,10 @@ export async function GET(req: NextRequest) {
     // 确保每个问题的选项都有正确的结构
     const formattedQuestions = questions.map(question => ({
       ...question,
-      options: question.options.map((option: { content: string; isCorrect: boolean }) => ({
-        content: option.content,
-        isCorrect: option.isCorrect
-      }))
+      options: Array.isArray(question.options) ? question.options.map(option => ({
+        content: option.content || '',
+        isCorrect: option.isCorrect || false
+      })) : []
     }));
 
     return NextResponse.json({
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('获取题目失败:', error);
     return NextResponse.json(
-      { message: '获取题目失败，请稍后重试' },
+      { error: '获取题目失败' },
       { status: 500 }
     );
   }
