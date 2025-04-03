@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-export interface User {
+export interface IUser {
   _id: string;
   username: string;
   email: string;
@@ -12,7 +12,7 @@ export interface User {
   updatedAt: Date;
 }
 
-const userSchema = new mongoose.Schema<User>({
+const userSchema = new mongoose.Schema<IUser>({
   username: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -29,4 +29,5 @@ userSchema.pre('save', function(next) {
   next();
 });
 
-export const User = mongoose.models.User || mongoose.model<User>('User', userSchema); 
+export const UserModel = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
+export default UserModel; 

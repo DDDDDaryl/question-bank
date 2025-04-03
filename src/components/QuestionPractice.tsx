@@ -59,15 +59,26 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
   };
 
   const renderOptions = () => {
+    console.log('当前题目:', currentQuestion);
     if (!currentQuestion?.options) {
-      console.log('No options found:', currentQuestion);
+      console.error('没有找到选项:', currentQuestion);
       return null;
     }
-    console.log('Rendering options:', currentQuestion.options);
+    
+    if (!Array.isArray(currentQuestion.options)) {
+      console.error('选项不是数组:', currentQuestion.options);
+      return null;
+    }
+    
+    console.log('渲染选项数组:', currentQuestion.options);
     return (
       <div className="flex flex-col gap-4 w-full mt-4">
         {currentQuestion.options.map((option, index) => {
-          console.log('Rendering option:', option);
+          console.log(`渲染第 ${index + 1} 个选项:`, option);
+          if (!option || typeof option.content === 'undefined') {
+            console.error(`选项 ${index + 1} 格式错误:`, option);
+            return null;
+          }
           return (
             <button
               key={index}

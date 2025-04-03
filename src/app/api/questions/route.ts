@@ -44,13 +44,29 @@ export async function GET(req: NextRequest) {
     }
 
     // 确保每个问题的选项都有正确的结构
-    const formattedQuestions = questions.map(question => ({
-      ...question,
-      options: Array.isArray(question.options) ? question.options.map(option => ({
-        content: option.content || '',
-        isCorrect: option.isCorrect || false
-      })) : []
-    }));
+    const formattedQuestions = questions.map(question => {
+      console.log('原始问题数据:', question);
+      const formattedOptions = Array.isArray(question.options) 
+        ? question.options.map(option => {
+            console.log('处理选项:', option);
+            if (typeof option === 'string') {
+              return {
+                content: option,
+                isCorrect: false
+              };
+            }
+            return {
+              content: option.content || '',
+              isCorrect: !!option.isCorrect
+            };
+          })
+        : [];
+      console.log('格式化后的选项:', formattedOptions);
+      return {
+        ...question,
+        options: formattedOptions
+      };
+    });
 
     return NextResponse.json({
       questions: formattedQuestions,
