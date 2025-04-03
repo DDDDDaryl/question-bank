@@ -1,112 +1,89 @@
-import { IQuestion, QuestionType, Difficulty } from '@/models/Question';
-import { PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+import type { Question } from '@/types/question';
 
 interface QuestionListItemProps {
-  question: IQuestion;
-  onEdit: (id: string) => void;
-  onDelete: (id: string) => void;
-  onView: (id: string) => void;
+  question: Question;
+  onEdit: (question: Question) => void;
+  onDelete: (id: string) => Promise<void>;
 }
 
-export default function QuestionListItem({
-  question,
-  onEdit,
-  onDelete,
-  onView,
-}: QuestionListItemProps) {
-  const getDifficultyColor = (difficulty: Difficulty) => {
+export default function QuestionListItem({ question, onEdit, onDelete }: QuestionListItemProps) {
+  const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
-      case Difficulty.EASY:
+      case 'EASY':
         return 'bg-green-100 text-green-800';
-      case Difficulty.MEDIUM:
+      case 'MEDIUM':
         return 'bg-yellow-100 text-yellow-800';
-      case Difficulty.HARD:
+      case 'HARD':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getTypeLabel = (type: QuestionType) => {
+  const getTypeLabel = (type: string) => {
     switch (type) {
-      case QuestionType.SINGLE_CHOICE:
+      case 'SINGLE_CHOICE':
         return '单选题';
-      case QuestionType.MULTIPLE_CHOICE:
+      case 'MULTIPLE_CHOICE':
         return '多选题';
       default:
-        return '未知类型';
+        return type;
     }
   };
-
-  const getDifficultyLabel = (difficulty: Difficulty) => {
-    switch (difficulty) {
-      case Difficulty.EASY:
-        return '简单';
-      case Difficulty.MEDIUM:
-        return '中等';
-      case Difficulty.HARD:
-        return '困难';
-      default:
-        return '未知';
-    }
-  };
-
-  if (!question._id) return null;
 
   return (
-    <tr>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm font-medium text-gray-900">{question.title}</div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-gray-900">{getTypeLabel(question.type)}</div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <span
-          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getDifficultyColor(
-            question.difficulty
-          )}`}
-        >
-          {getDifficultyLabel(question.difficulty)}
-        </span>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="flex flex-wrap gap-1">
-          {question.tags.map((tag, index) => (
-            <span
-              key={index}
-              className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
-            >
-              {tag}
+    <div className="bg-white shadow rounded-lg p-6">
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <h3 className="text-lg font-medium text-gray-900 mb-2">{question.title}</h3>
+          <p className="text-gray-600 mb-4">{question.content}</p>
+          <div className="flex flex-wrap gap-2 mb-4">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDifficultyColor(question.difficulty)}`}>
+              {question.difficulty}
             </span>
-          ))}
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              {getTypeLabel(question.type)}
+            </span>
+            {question.tags.map((tag) => (
+              <span key={tag} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                {tag}
+              </span>
+            ))}
+          </div>
+          <div className="space-y-2">
+            {question.options.map((option, index) => (
+              <div key={index} className="flex items-start">
+                <span className="text-gray-500 mr-2">{String.fromCharCode(65 + index)}.</span>
+                <span className="text-gray-700">{option}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4">
+            <p className="text-sm font-medium text-gray-500">答案：</p>
+            <p className="text-gray-700">{Array.isArray(question.answer) ? question.answer.join(', ') : question.answer}</p>
+          </div>
+          {question.explanation && (
+            <div className="mt-4">
+              <p className="text-sm font-medium text-gray-500">解析：</p>
+              <p className="text-gray-700">{question.explanation}</p>
+            </div>
+          )}
         </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-        <div className="flex justify-end space-x-2">
+        <div className="flex gap-2">
           <button
-            onClick={() => onView(question._id!)}
-            className="text-gray-600 hover:text-gray-900"
-            title="查看"
+            onClick={() => onEdit(question)}
+            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
-            <EyeIcon className="h-5 w-5" />
+            编辑
           </button>
           <button
-            onClick={() => onEdit(question._id!)}
-            className="text-blue-600 hover:text-blue-900"
-            title="编辑"
+            onClick={() => onDelete(question._id as string)}
+            className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
-            <PencilIcon className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => onDelete(question._id!)}
-            className="text-red-600 hover:text-red-900"
-            title="删除"
-          >
-            <TrashIcon className="h-5 w-5" />
+            删除
           </button>
         </div>
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 } 

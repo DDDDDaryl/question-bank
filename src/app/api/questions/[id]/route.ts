@@ -1,100 +1,113 @@
-import { NextRequest } from 'next/server';
-import dbConnect from '@/lib/dbConnect';
-import Question from '@/models/mongodb/Question';
-import {
-  successResponse,
-  errorResponse,
-  notFoundResponse,
-  validationErrorResponse,
-} from '@/lib/apiResponse';
+import { NextRequest, NextResponse } from 'next/server';
 import { validateQuestion } from '@/lib/validation';
-import { isValidObjectId, toObjectId } from '@/lib/objectId';
+import QuestionModel from '@/models/mongodb/Question';
+import dbConnect from '@/lib/mongodb';
+import { ZodError } from 'zod';
 
-// GET /api/questions/[id] - 获取单个题目
+// 辅助函数：返回验证错误响应
+function validationErrorResponse(error: ZodError) {
+  return NextResponse.json(
+    { 
+      success: false, 
+      message: '验证失败',
+      errors: error.errors.map(err => ({
+        path: err.path.join('.'),
+        message: err.message
+      }))
+    },
+    { status: 400 }
+  );
+}
+
+// 辅助函数：返回成功响应
+function successResponse(data: any) {
+  return NextResponse.json(
+    { success: true, data },
+    { status: 200 }
+  );
+}
+
+// 辅助函数：返回错误响应
+function errorResponse(message: string, status: number = 500) {
+  return NextResponse.json(
+    { success: false, message },
+    { status }
+  );
+}
+
+// GET /api/questions/[id]
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     await dbConnect();
-
-    // 验证 ID 格式
-    if (!isValidObjectId(params.id)) {
-      return notFoundResponse('题目不存在');
-    }
-
-    // 获取题目
-    const question = await Question.findById(toObjectId(params.id));
+    const question = await QuestionModel.findById(params.id);
+    
     if (!question) {
-      return notFoundResponse('题目不存在');
+      return errorResponse('题目不存在', 404);
     }
 
     return successResponse({ question });
   } catch (error) {
-    return errorResponse(error as Error);
+    console.error('获取题目失败:', error);
+    return errorResponse('获取题目失败');
   }
 }
 
-// PATCH /api/questions/[id] - 更新单个题目
+// PATCH /api/questions/[id]
 export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    await dbConnect();
-
-    // 验证 ID 格式
-    if (!isValidObjectId(params.id)) {
-      return notFoundResponse('题目不存在');
-    }
-
-    // 获取请求数据
     const data = await request.json();
 
     // 验证数据
-    const errors = validateQuestion(data);
-    if (errors) {
-      return validationErrorResponse(errors);
+    try {
+      validateQuestion(data);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        return validationErrorResponse(error);
+      }
+      throw error;
     }
 
     // 更新题目
-    const question = await Question.findByIdAndUpdate(
-      toObjectId(params.id),
-      data,
+    await dbConnect();
+    const question = await QuestionModel.findByIdAndUpdate(
+      params.id,
+      { $set: data },
       { new: true }
     );
 
     if (!question) {
-      return notFoundResponse('题目不存在');
+      return errorResponse('题目不存在', 404);
     }
 
-    return successResponse({ question }, '题目更新成功');
+    return successResponse({ question });
   } catch (error) {
-    return errorResponse(error as Error);
+    console.error('更新题目失败:', error);
+    return errorResponse('更新题目失败');
   }
 }
 
-// DELETE /api/questions/[id] - 删除单个题目
+// DELETE /api/questions/[id]
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
     await dbConnect();
+    const question = await QuestionModel.findByIdAndDelete(params.id);
 
-    // 验证 ID 格式
-    if (!isValidObjectId(params.id)) {
-      return notFoundResponse('题目不存在');
-    }
-
-    // 删除题目
-    const question = await Question.findByIdAndDelete(toObjectId(params.id));
     if (!question) {
-      return notFoundResponse('题目不存在');
+      return errorResponse('题目不存在', 404);
     }
 
-    return successResponse({ question }, '题目删除成功');
+    return successResponse({ message: '删除成功' });
   } catch (error) {
-    return errorResponse(error as Error);
+    console.error('删除题目失败:', error);
+    return errorResponse('删除题目失败');
   }
 } 

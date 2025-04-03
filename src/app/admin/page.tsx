@@ -1,46 +1,39 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { QuestionType, Difficulty, IQuestion } from '@/models/Question';
-import QuestionListItem from '@/components/QuestionListItem';
+import type { Question } from '@/types/question';
 import QuestionForm from '@/components/QuestionForm';
-import Modal from '@/components/Modal';
+import QuestionListItem from '@/components/QuestionListItem';
 
 export default function AdminPage() {
-  const [questions, setQuestions] = useState<IQuestion[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<Question | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedType, setSelectedType] = useState<QuestionType | ''>('');
-  const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty | ''>('');
+  const [selectedType, setSelectedType] = useState<string>('');
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>('');
   const [selectedTag, setSelectedTag] = useState<string>('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingQuestion, setEditingQuestion] = useState<IQuestion | null>(null);
-  const [viewingQuestion, setViewingQuestion] = useState<IQuestion | null>(null);
 
   const fetchQuestions = useCallback(async () => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       const params = new URLSearchParams();
       if (searchQuery) params.append('search', searchQuery);
       if (selectedType) params.append('type', selectedType);
       if (selectedDifficulty) params.append('difficulty', selectedDifficulty);
-      if (selectedTag) params.append('tags', selectedTag);
+      if (selectedTag) params.append('tag', selectedTag);
 
       const response = await fetch(`/api/questions?${params.toString()}`);
+      if (!response.ok) throw new Error('Failed to fetch questions');
       const data = await response.json();
-      
-      if (data.success) {
-        setQuestions(data.data.questions);
-        setError(null);
-      } else {
-        setError(data.message);
-      }
+      setQuestions(data);
+      setError(null);
     } catch (err) {
-      setError('获取题目列表失败');
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   }, [searchQuery, selectedType, selectedDifficulty, selectedTag]);
 
@@ -48,179 +41,153 @@ export default function AdminPage() {
     fetchQuestions();
   }, [fetchQuestions]);
 
-  const handleSubmit = async (data: Omit<IQuestion, '_id' | 'createdAt' | 'updatedAt'>) => {
+  const handleSubmit = async (data: Omit<Question, '_id' | 'createdAt' | 'updatedAt'>) => {
     try {
-      const url = editingQuestion 
-        ? `/api/questions/${editingQuestion._id}`
-        : '/api/questions';
-      
+      const url = editingQuestion ? `/api/questions/${editingQuestion._id}` : '/api/questions';
+      const method = editingQuestion ? 'PATCH' : 'POST';
+
       const response = await fetch(url, {
-        method: editingQuestion ? 'PATCH' : 'POST',
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();
-      
-      if (result.success) {
-        fetchQuestions();
-        setIsModalOpen(false);
-        setEditingQuestion(null);
-      } else {
-        setError(result.message);
-      }
+      if (!response.ok) throw new Error('Failed to save question');
+
+      await fetchQuestions();
+      setShowForm(false);
+      setEditingQuestion(undefined);
     } catch (err) {
-      setError('保存题目失败');
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('确定要删除这个题目吗？')) return;
+    if (!window.confirm('确定要删除这道题目吗？')) return;
 
     try {
       const response = await fetch(`/api/questions/${id}`, {
         method: 'DELETE',
       });
 
-      const result = await response.json();
-      
-      if (result.success) {
-        fetchQuestions();
-      } else {
-        setError(result.message);
-      }
+      if (!response.ok) throw new Error('Failed to delete question');
+
+      await fetchQuestions();
     } catch (err) {
-      setError('删除题目失败');
-      console.error(err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
     }
   };
 
+  const handleEdit = (question: Question) => {
+    setEditingQuestion(question);
+    setShowForm(true);
+  };
+
+  const handleCancel = () => {
+    setShowForm(false);
+    setEditingQuestion(undefined);
+  };
+
+  const allTags = Array.from(new Set(questions.flatMap(q => q.tags)));
+
   return (
-    <div className="min-h-screen p-6">
-      <div className="sm:flex sm:items-center sm:justify-between mb-6">
-        <h1 className="text-3xl font-bold">题库管理系统</h1>
-        <button
-          onClick={() => {
-            setEditingQuestion(null);
-            setIsModalOpen(true);
-          }}
-          className="mt-3 sm:mt-0 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          添加题目
-        </button>
-      </div>
-      
-      {/* 搜索和筛选区域 */}
-      <div className="mb-6 space-y-4">
-        <input
-          type="text"
-          placeholder="搜索题目..."
-          className="w-full p-2 border rounded"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        
-        <div className="flex gap-4">
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">题目管理</h1>
+        <div className="flex flex-wrap gap-4 mb-4">
+          <input
+            type="text"
+            placeholder="搜索题目..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 min-w-[200px] rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          />
           <select
-            className="p-2 border rounded"
             value={selectedType}
-            onChange={(e) => setSelectedType(e.target.value as QuestionType)}
+            onChange={(e) => setSelectedType(e.target.value)}
+            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           >
             <option value="">所有类型</option>
-            {Object.values(QuestionType).map((type) => (
-              <option key={type} value={type}>{type}</option>
-            ))}
+            <option value="SINGLE_CHOICE">单选题</option>
+            <option value="MULTIPLE_CHOICE">多选题</option>
           </select>
-          
           <select
-            className="p-2 border rounded"
             value={selectedDifficulty}
-            onChange={(e) => setSelectedDifficulty(e.target.value as Difficulty)}
+            onChange={(e) => setSelectedDifficulty(e.target.value)}
+            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
           >
             <option value="">所有难度</option>
-            {Object.values(Difficulty).map((difficulty) => (
-              <option key={difficulty} value={difficulty}>{difficulty}</option>
+            <option value="EASY">简单</option>
+            <option value="MEDIUM">中等</option>
+            <option value="HARD">困难</option>
+          </select>
+          <select
+            value={selectedTag}
+            onChange={(e) => setSelectedTag(e.target.value)}
+            className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          >
+            <option value="">所有标签</option>
+            {allTags.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
             ))}
           </select>
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            添加题目
+          </button>
         </div>
       </div>
 
-      {/* 错误提示 */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* 题目列表 */}
-      {loading ? (
-        <div className="text-center py-4">加载中...</div>
-      ) : (
-        <div className="shadow overflow-hidden border-b border-gray-200 sm:rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  标题
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  类型
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  难度
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  标签
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {questions.map((question) => (
-                <QuestionListItem
-                  key={question._id}
-                  question={question}
-                  onEdit={(id) => {
-                    setEditingQuestion(question);
-                    setIsModalOpen(true);
-                  }}
-                  onDelete={handleDelete}
-                  onView={(id) => {
-                    setViewingQuestion(question);
-                    setIsModalOpen(true);
-                  }}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* 编辑/创建模态框 */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingQuestion(null);
-          setViewingQuestion(null);
-        }}
-        title={editingQuestion ? '编辑题目' : viewingQuestion ? '查看题目' : '添加题目'}
-      >
+      {showForm ? (
         <QuestionForm
-          initialData={editingQuestion || viewingQuestion || undefined}
+          question={editingQuestion}
           onSubmit={handleSubmit}
-          onCancel={() => {
-            setIsModalOpen(false);
-            setEditingQuestion(null);
-            setViewingQuestion(null);
-          }}
+          onCancel={handleCancel}
         />
-      </Modal>
+      ) : (
+        <div className="space-y-4">
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent"></div>
+              <p className="mt-2 text-gray-500">加载中...</p>
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">暂无题目</p>
+            </div>
+          ) : (
+            questions.map((question) => (
+              <QuestionListItem
+                key={question._id}
+                question={question}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 } 

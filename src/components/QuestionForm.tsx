@@ -1,46 +1,40 @@
 import { useState, useEffect } from 'react';
-import { QuestionType, Difficulty, IQuestion } from '@/models/Question';
+import type { Question, QuestionType, Difficulty } from '@/types/question';
 
 interface QuestionFormProps {
-  initialData?: IQuestion;
-  onSubmit: (data: Omit<IQuestion, '_id' | 'createdAt' | 'updatedAt'>) => void;
+  question?: Question;
+  onSubmit: (data: Omit<Question, '_id' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
 }
 
-export default function QuestionForm({
-  initialData,
-  onSubmit,
-  onCancel,
-}: QuestionFormProps) {
-  const [formData, setFormData] = useState<
-    Omit<IQuestion, '_id' | 'createdAt' | 'updatedAt'>
-  >({
+export default function QuestionForm({ question, onSubmit, onCancel }: QuestionFormProps) {
+  const [formData, setFormData] = useState<Omit<Question, '_id' | 'createdAt' | 'updatedAt'>>({
     title: '',
-    type: QuestionType.SINGLE_CHOICE,
+    type: 'SINGLE_CHOICE',
     content: '',
-    options: ['', '', '', ''],
+    options: [''],
     answer: '',
     explanation: '',
-    difficulty: Difficulty.MEDIUM,
+    difficulty: 'MEDIUM',
     tags: [],
-    source: '',
+    source: ''
   });
 
   useEffect(() => {
-    if (initialData) {
+    if (question) {
       setFormData({
-        title: initialData.title,
-        type: initialData.type,
-        content: initialData.content,
-        options: initialData.options || ['', '', '', ''],
-        answer: initialData.answer,
-        explanation: initialData.explanation || '',
-        difficulty: initialData.difficulty,
-        tags: initialData.tags,
-        source: initialData.source || '',
+        title: question.title,
+        type: question.type,
+        content: question.content,
+        options: question.options,
+        answer: question.answer,
+        explanation: question.explanation || '',
+        difficulty: question.difficulty,
+        tags: question.tags,
+        source: question.source || ''
       });
     }
-  }, [initialData]);
+  }, [question]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,198 +42,181 @@ export default function QuestionForm({
   };
 
   const handleOptionChange = (index: number, value: string) => {
-    const newOptions = [...(formData.options || [])];
+    const newOptions = [...formData.options];
     newOptions[index] = value;
     setFormData({ ...formData, options: newOptions });
   };
 
-  const handleTagsChange = (value: string) => {
-    const tags = value.split(',').map((tag) => tag.trim()).filter(Boolean);
-    setFormData({ ...formData, tags });
+  const addOption = () => {
+    setFormData({ ...formData, options: [...formData.options, ''] });
+  };
+
+  const removeOption = (index: number) => {
+    const newOptions = formData.options.filter((_, i) => i !== index);
+    setFormData({ ...formData, options: newOptions });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {/* 标题 */}
       <div>
         <label className="block text-sm font-medium text-gray-700">标题</label>
         <input
           type="text"
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           required
         />
       </div>
 
-      {/* 类型 */}
       <div>
         <label className="block text-sm font-medium text-gray-700">类型</label>
         <select
           value={formData.type}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              type: e.target.value as QuestionType,
-            })
-          }
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          onChange={(e) => setFormData({ ...formData, type: e.target.value as QuestionType })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         >
-          <option value={QuestionType.SINGLE_CHOICE}>单选题</option>
-          <option value={QuestionType.MULTIPLE_CHOICE}>多选题</option>
+          <option value="SINGLE_CHOICE">单选题</option>
+          <option value="MULTIPLE_CHOICE">多选题</option>
         </select>
       </div>
 
-      {/* 题目内容 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">题目内容</label>
+        <label className="block text-sm font-medium text-gray-700">内容</label>
         <textarea
           value={formData.content}
           onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
           rows={3}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           required
         />
       </div>
 
-      {/* 选项 */}
       <div>
         <label className="block text-sm font-medium text-gray-700">选项</label>
         <div className="space-y-2">
-          {formData.options?.map((option, index) => (
-            <input
-              key={index}
-              type="text"
-              value={option}
-              onChange={(e) => handleOptionChange(index, e.target.value)}
-              placeholder={`选项 ${index + 1}`}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              required
-            />
+          {formData.options.map((option, index) => (
+            <div key={index} className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={option}
+                onChange={(e) => handleOptionChange(index, e.target.value)}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                required
+              />
+              {formData.options.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removeOption(index)}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  删除
+                </button>
+              )}
+            </div>
           ))}
+          <button
+            type="button"
+            onClick={addOption}
+            className="text-indigo-600 hover:text-indigo-800"
+          >
+            添加选项
+          </button>
         </div>
       </div>
 
-      {/* 答案 */}
       <div>
         <label className="block text-sm font-medium text-gray-700">答案</label>
-        {formData.type === QuestionType.SINGLE_CHOICE ? (
+        {formData.type === 'SINGLE_CHOICE' ? (
           <select
-            value={formData.answer}
+            value={formData.answer as string}
             onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             required
           >
-            <option value="">请选择正确答案</option>
-            {formData.options?.map((option, index) => (
-              <option key={index} value={option}>
-                {option}
+            {formData.options.map((_, index) => (
+              <option key={index} value={index.toString()}>
+                选项 {index + 1}
               </option>
             ))}
           </select>
         ) : (
           <div className="space-y-2">
-            {formData.options?.map((option, index) => (
-              <div key={index} className="flex items-center">
+            {formData.options.map((_, index) => (
+              <label key={index} className="flex items-center">
                 <input
                   type="checkbox"
-                  checked={formData.answer.includes(option)}
+                  checked={(formData.answer as string[]).includes(index.toString())}
                   onChange={(e) => {
-                    const answers = formData.answer
-                      ? formData.answer.split(',')
-                      : [];
-                    if (e.target.checked) {
-                      answers.push(option);
-                    } else {
-                      const index = answers.indexOf(option);
-                      if (index > -1) {
-                        answers.splice(index, 1);
-                      }
-                    }
-                    setFormData({
-                      ...formData,
-                      answer: answers.join(','),
-                    });
+                    const newAnswer = e.target.checked
+                      ? [...(formData.answer as string[]), index.toString()]
+                      : (formData.answer as string[]).filter((a) => a !== index.toString());
+                    setFormData({ ...formData, answer: newAnswer });
                   }}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
-                <label className="ml-2 text-sm text-gray-700">{option}</label>
-              </div>
+                <span className="ml-2">选项 {index + 1}</span>
+              </label>
             ))}
           </div>
         )}
       </div>
 
-      {/* 解释 */}
       <div>
         <label className="block text-sm font-medium text-gray-700">解释</label>
         <textarea
           value={formData.explanation}
-          onChange={(e) =>
-            setFormData({ ...formData, explanation: e.target.value })
-          }
-          rows={3}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          rows={2}
         />
       </div>
 
-      {/* 难度 */}
       <div>
         <label className="block text-sm font-medium text-gray-700">难度</label>
         <select
           value={formData.difficulty}
-          onChange={(e) =>
-            setFormData({
-              ...formData,
-              difficulty: e.target.value as Difficulty,
-            })
-          }
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          required
+          onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as Difficulty })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         >
-          <option value={Difficulty.EASY}>简单</option>
-          <option value={Difficulty.MEDIUM}>中等</option>
-          <option value={Difficulty.HARD}>困难</option>
+          <option value="EASY">简单</option>
+          <option value="MEDIUM">中等</option>
+          <option value="HARD">困难</option>
         </select>
       </div>
 
-      {/* 标签 */}
       <div>
-        <label className="block text-sm font-medium text-gray-700">
-          标签（用逗号分隔）
-        </label>
+        <label className="block text-sm font-medium text-gray-700">标签</label>
         <input
           type="text"
           value={formData.tags.join(', ')}
-          onChange={(e) => handleTagsChange(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          placeholder="例如：时政热点, 政治理论"
+          onChange={(e) => setFormData({ ...formData, tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean) })}
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          placeholder="用逗号分隔多个标签"
         />
       </div>
 
-      {/* 来源 */}
       <div>
         <label className="block text-sm font-medium text-gray-700">来源</label>
         <input
           type="text"
           value={formData.source}
           onChange={(e) => setFormData({ ...formData, source: e.target.value })}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
         />
       </div>
 
-      {/* 按钮 */}
-      <div className="flex justify-end space-x-3 pt-4">
+      <div className="flex justify-end space-x-4">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
           取消
         </button>
         <button
           type="submit"
-          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         >
           保存
         </button>

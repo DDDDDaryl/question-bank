@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import Question from '@/models/mongodb/Question';
+import QuestionModel from '@/models/mongodb/Question';
 import { questions2025 } from './questions2025';
 
 async function importQuestions() {
@@ -10,13 +10,13 @@ async function importQuestions() {
     console.log('Connected to MongoDB');
 
     // 删除旧的政治题目
-    await Question.deleteMany({
+    await QuestionModel.deleteMany({
       tags: { $in: ['时政要闻', '经济发展', '经济政策'] }
     });
     console.log('Deleted old political questions');
 
     // 导入新题目
-    await Question.insertMany(questions2025);
+    await QuestionModel.insertMany(questions2025);
     console.log('Successfully imported new questions');
 
   } catch (error) {
