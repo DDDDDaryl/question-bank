@@ -13,11 +13,48 @@ import connectToDatabase from '@/lib/mongodb';
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
-    const questions = await Question.find().populate('createdBy', 'username');
-    return NextResponse.json(questions);
+    
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get('type');
+    const difficulty = searchParams.get('difficulty');
+    const tag = searchParams.get('tag');
+    const search = searchParams.get('search');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+
+    // 构建查询条件
+    const query: any = {};
+    if (type) query.type = type;
+    if (difficulty) query.difficulty = difficulty;
+    if (tag) query.tags = tag;
+    if (search) query.title = { $regex: search, $options: 'i' };
+
+    // 获取题目总数
+    const total = await Question.countDocuments(query);
+
+    // 获取分页数据
+    const questions = await Question.find(query)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    if (!questions || questions.length === 0) {
+      return NextResponse.json({ questions: [], total: 0, page, limit, totalPages: 0 });
+    }
+
+    return NextResponse.json({
+      questions,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
   } catch (error) {
     console.error('获取题目失败:', error);
-    return NextResponse.json({ error: '获取题目失败' }, { status: 500 });
+    return NextResponse.json(
+      { message: '获取题目失败，请稍后重试' },
+      { status: 500 }
+    );
   }
 }
 
@@ -25,9 +62,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
+    
     const token = await getToken();
     if (!token) {
-      return NextResponse.json({ error: '未授权' }, { status: 401 });
+      return NextResponse.json(
+        { message: '未授权' },
+        { status: 401 }
+      );
     }
 
     const data = await req.json();
@@ -36,13 +77,23 @@ export async function POST(req: NextRequest) {
       ...validatedData,
       createdBy: token._id
     });
-    return NextResponse.json(question);
+
+    return NextResponse.json({
+      message: '创建成功',
+      question,
+    });
   } catch (error) {
     console.error('创建题目失败:', error);
     if (error instanceof ZodError) {
-      return NextResponse.json({ error: '数据验证失败', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { message: '数据验证失败', details: error.errors },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({ error: '创建题目失败' }, { status: 500 });
+    return NextResponse.json(
+      { message: '创建题目失败，请稍后重试' },
+      { status: 500 }
+    );
   }
 }
 
