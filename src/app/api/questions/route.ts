@@ -33,16 +33,27 @@ export async function GET(req: NextRequest) {
 
     // 获取分页数据
     const questions = await Question.find(query)
+      .select('_id title content type difficulty options explanation tags createdAt updatedAt')
       .skip((page - 1) * limit)
       .limit(limit)
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     if (!questions || questions.length === 0) {
       return NextResponse.json({ questions: [], total: 0, page, limit, totalPages: 0 });
     }
 
+    // 确保每个问题的选项都有正确的结构
+    const formattedQuestions = questions.map(question => ({
+      ...question,
+      options: question.options.map((option: { content: string; isCorrect: boolean }) => ({
+        content: option.content,
+        isCorrect: option.isCorrect
+      }))
+    }));
+
     return NextResponse.json({
-      questions,
+      questions: formattedQuestions,
       total,
       page,
       limit,

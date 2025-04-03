@@ -58,6 +58,31 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
     }
   };
 
+  const renderOptions = () => {
+    if (!currentQuestion?.options) return null;
+    return (
+      <div className="flex flex-col gap-4 w-full mt-4">
+        {currentQuestion.options.map((option, index) => (
+          <button
+            key={index}
+            onClick={() => handleAnswerSelect(index)}
+            disabled={selectedAnswers.length > 0}
+            className={`w-full p-4 text-left rounded-lg border ${
+              selectedAnswers.includes(index)
+                ? option.isCorrect
+                  ? 'bg-green-100 border-green-500'
+                  : 'bg-red-100 border-red-500'
+                : 'hover:bg-gray-100 border-gray-200'
+            } transition-colors duration-200`}
+          >
+            <span className="font-medium mr-2">{String.fromCharCode(65 + index)}.</span>
+            {option.content}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
   if (!currentQuestion) {
     return <div>No questions available</div>;
   }
@@ -72,32 +97,7 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
         <h2 className="text-xl font-semibold mb-4">{currentQuestion.title}</h2>
         <p className="mb-4">{currentQuestion.content}</p>
         
-        <div className="space-y-3">
-          {currentQuestion.options.map((option, index) => (
-            <label
-              key={index}
-              className={`block w-full p-3 rounded-lg border cursor-pointer transition-colors
-                ${selectedAnswers.includes(index)
-                  ? 'bg-blue-50 border-blue-500'
-                  : 'hover:bg-gray-50 border-gray-200'}`}
-            >
-              <div className="flex items-start">
-                <div className="flex-shrink-0 mt-0.5">
-                  <input
-                    type={currentQuestion.type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
-                    name="answer"
-                    checked={selectedAnswers.includes(index)}
-                    onChange={() => handleAnswerSelect(index)}
-                    className="mr-3"
-                  />
-                </div>
-                <div className="flex-grow">
-                  <span className="block text-sm">{option.content}</span>
-                </div>
-              </div>
-            </label>
-          ))}
-        </div>
+        {renderOptions()}
       </div>
 
       {!showExplanation ? (
