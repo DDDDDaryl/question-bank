@@ -19,13 +19,46 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
   const isLastQuestion = currentIndex === questions.length - 1;
 
   useEffect(() => {
-    if (currentQuestion) {
-      setIsLoading(true);
-      // 重置选项状态
-      setSelectedAnswers([]);
-      setShowExplanation(false);
-      setIsLoading(false);
-    }
+    let mounted = true;
+
+    const initializeQuestion = async () => {
+      if (!currentQuestion) return;
+      
+      try {
+        setIsLoading(true);
+        // 验证选项数据的完整性
+        if (!Array.isArray(currentQuestion.options)) {
+          console.error('选项数据格式错误:', currentQuestion);
+          return;
+        }
+
+        const hasInvalidOptions = currentQuestion.options.some(
+          option => !option || typeof option.content === 'undefined'
+        );
+
+        if (hasInvalidOptions) {
+          console.error('存在无效的选项数据:', currentQuestion.options);
+          return;
+        }
+
+        if (mounted) {
+          setSelectedAnswers([]);
+          setShowExplanation(false);
+        }
+      } catch (error) {
+        console.error('初始化题目失败:', error);
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initializeQuestion();
+
+    return () => {
+      mounted = false;
+    };
   }, [currentQuestion]);
 
   const handleAnswerSelect = (index: number) => {
@@ -76,23 +109,24 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
 
     if (!currentQuestion?.options || !Array.isArray(currentQuestion.options)) {
       console.error('选项格式错误:', currentQuestion);
-      return <div className="text-center py-4 text-red-500">选项加载失败</div>;
+      return <div className="text-center py-4 text-red-500">选项数据格式错误</div>;
     }
 
-    if (currentQuestion.options.length === 0) {
-      return <div className="text-center py-4 text-gray-500">暂无选项</div>;
+    const hasInvalidOptions = currentQuestion.options.some(
+      option => !option || typeof option.content === 'undefined'
+    );
+
+    if (hasInvalidOptions) {
+      console.error('存在无效的选项:', currentQuestion.options);
+      return <div className="text-center py-4 text-red-500">选项数据不完整</div>;
     }
 
     return (
       <div className="flex flex-col gap-4 w-full mt-4">
         {currentQuestion.options.map((option, index) => {
-          // 确保选项有有效的内容
-          const content = option?.content || `选项 ${index + 1}`;
-          const isCorrect = !!option?.isCorrect;
-
           const isSelected = selectedAnswers.includes(index);
           const showResult = showExplanation && isSelected;
-          const isAnswerCorrect = showResult && isCorrect;
+          const isAnswerCorrect = showResult && option.isCorrect;
 
           return (
             <button
@@ -111,7 +145,7 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
               <span className="font-medium mr-4 text-gray-500">
                 {String.fromCharCode(65 + index)}.
               </span>
-              <span className="flex-1">{content}</span>
+              <span className="flex-1">{option.content}</span>
             </button>
           );
         })}

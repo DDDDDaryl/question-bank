@@ -46,24 +46,24 @@ export async function GET(req: NextRequest) {
     // 确保每个问题的选项都有正确的结构
     const formattedQuestions = questions.map(question => {
       const formattedOptions = Array.isArray(question.options) 
-        ? question.options.map(option => {
-            // 如果选项是字符串，转换为正确的格式
+        ? question.options.map((option, index) => {
+            // 如果选项是字符串，直接使用作为内容
             if (typeof option === 'string') {
               return {
                 content: option,
                 isCorrect: false
               };
             }
-            // 如果选项是对象，确保有正确的属性
+            // 如果选项是对象，保留原有内容
             if (typeof option === 'object' && option !== null) {
               return {
-                content: option.content || '',
+                content: option.content,
                 isCorrect: typeof option.isCorrect === 'boolean' ? option.isCorrect : false
               };
             }
-            // 如果选项格式无效，返回默认值
+            // 如果选项完全无效，才使用默认值
             return {
-              content: '',
+              content: `选项 ${index + 1}`,
               isCorrect: false
             };
           })
@@ -71,10 +71,7 @@ export async function GET(req: NextRequest) {
 
       return {
         ...question,
-        options: formattedOptions.map((option, index) => ({
-          content: option.content || `选项 ${index + 1}`,
-          isCorrect: !!option.isCorrect
-        }))
+        options: formattedOptions
       };
     });
 

@@ -50,17 +50,42 @@ export default function TopicsPracticePage() {
         throw new Error('获取题目失败');
       }
       const data = await response.json();
-      if (data.questions && data.questions.length > 0) {
-        // 确保每个题目都有正确的选项结构
-        const formattedQuestions = data.questions.map((question: Question) => ({
-          ...question,
-          options: Array.isArray(question.options) ? question.options : []
-        }));
-        setQuestions(formattedQuestions);
-        setIsPracticing(true);
-      } else {
-        alert('该主题下暂无题目');
+      
+      if (!data.questions || !Array.isArray(data.questions)) {
+        throw new Error('题目数据格式错误');
       }
+
+      if (data.questions.length === 0) {
+        alert('该主题下暂无题目');
+        return;
+      }
+
+      // 验证每个题目的数据完整性
+      const validQuestions = data.questions.filter((question: Question) => {
+        if (!question.options || !Array.isArray(question.options)) {
+          console.error('题目选项格式错误:', question);
+          return false;
+        }
+
+        const hasInvalidOptions = question.options.some(
+          option => !option || typeof option.content === 'undefined'
+        );
+
+        if (hasInvalidOptions) {
+          console.error('题目包含无效选项:', question);
+          return false;
+        }
+
+        return true;
+      });
+
+      if (validQuestions.length === 0) {
+        alert('未找到有效的题目数据');
+        return;
+      }
+
+      setQuestions(validQuestions);
+      setIsPracticing(true);
     } catch (error) {
       console.error('获取题目失败:', error);
       alert('获取题目失败，请稍后重试');
