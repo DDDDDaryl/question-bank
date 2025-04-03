@@ -81,15 +81,19 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
                   ? 'bg-blue-50 border-blue-500'
                   : 'hover:bg-gray-50 border-gray-200'}`}
             >
-              <div className="flex items-center">
-                <input
-                  type={currentQuestion.type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
-                  name="answer"
-                  checked={selectedAnswers.includes(index)}
-                  onChange={() => handleAnswerSelect(index)}
-                  className="mr-3"
-                />
-                <span className="flex-1">{option.content}</span>
+              <div className="flex items-start">
+                <div className="flex-shrink-0 mt-0.5">
+                  <input
+                    type={currentQuestion.type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
+                    name="answer"
+                    checked={selectedAnswers.includes(index)}
+                    onChange={() => handleAnswerSelect(index)}
+                    className="mr-3"
+                  />
+                </div>
+                <div className="flex-grow">
+                  <span className="block text-sm">{option.content}</span>
+                </div>
               </div>
             </label>
           ))}
