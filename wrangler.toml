@@ -1,0 +1,6 @@
+name = "question-bank-proxy"
+main = "src/index.js"
+compatibility_date = "2024-04-03"
+
+[vars]
+VERCEL_URL = "question-bank-vert.vercel.app" 

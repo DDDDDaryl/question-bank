@@ -76,19 +76,21 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
           {currentQuestion.options.map((option, index) => (
             <label
               key={index}
-              className={`flex items-center p-3 rounded-lg border cursor-pointer transition-colors
+              className={`block w-full p-3 rounded-lg border cursor-pointer transition-colors
                 ${selectedAnswers.includes(index)
                   ? 'bg-blue-50 border-blue-500'
                   : 'hover:bg-gray-50 border-gray-200'}`}
             >
-              <input
-                type={currentQuestion.type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
-                name="answer"
-                checked={selectedAnswers.includes(index)}
-                onChange={() => handleAnswerSelect(index)}
-                className="mr-3"
-              />
-              <span>{option.content}</span>
+              <div className="flex items-center">
+                <input
+                  type={currentQuestion.type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
+                  name="answer"
+                  checked={selectedAnswers.includes(index)}
+                  onChange={() => handleAnswerSelect(index)}
+                  className="mr-3"
+                />
+                <span className="flex-1">{option.content}</span>
+              </div>
             </label>
           ))}
         </div>
