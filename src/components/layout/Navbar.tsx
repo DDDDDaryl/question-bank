@@ -71,21 +71,6 @@ export default function Navbar() {
     }
   };
 
-  const handleAuthClick = async () => {
-    console.log('Attempting to navigate to auth page...');
-    try {
-      await router.push('/auth');
-      console.log('Navigation completed successfully');
-    } catch (error) {
-      console.error('Navigation error:', error);
-      // 如果路由导航失败，尝试使用Link组件的行为
-      const link = document.createElement('a');
-      link.href = '/auth';
-      link.click();
-      console.log('Fallback navigation initiated');
-    }
-  };
-
   const isActive = (path: string) => pathname === path;
 
   if (loading) {
@@ -171,12 +156,12 @@ export default function Navbar() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={handleAuthClick}
+              <Link
+                href="/auth"
                 className="text-sm font-medium text-gray-500 hover:text-gray-700"
               >
                 登录/注册
-              </button>
+              </Link>
             )}
           </div>
         </div>
