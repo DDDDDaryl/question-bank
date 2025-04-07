@@ -40,7 +40,6 @@ export async function middleware(request: NextRequest) {
 
   // 检查是否是需要保护的路由
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
-  const isPublicRoute = publicRoutes.some(route => pathname === route);
 
   // 获取token
   const token = request.cookies.get('token')?.value;
@@ -59,13 +58,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // 未登录用户可以访问公开路由
-    if (isPublicRoute) {
-      return NextResponse.next();
-    }
-
-    // 其他情况重定向到登录页面
-    return NextResponse.redirect(new URL('/auth', request.url));
+    // 未登录用户可以访问非保护路由
+    return NextResponse.next();
   }
 
   try {
