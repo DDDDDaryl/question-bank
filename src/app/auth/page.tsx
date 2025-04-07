@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react';
 import LoginForm from '@/components/auth/LoginForm';
 import RegisterForm from '@/components/auth/RegisterForm';
+import { useRouter } from 'next/navigation';
 
 function AuthContent() {
   const [isLogin, setIsLogin] = useState(true);

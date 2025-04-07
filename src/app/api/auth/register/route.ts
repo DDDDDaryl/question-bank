@@ -1,49 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectDB } from '@/lib/db';
 import { UserModel } from '@/models/mongodb/User';
+import dbConnect from '@/lib/mongodb';
+import { SystemSettings } from '@/models/mongodb/SystemSettings';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 
-export async function POST(req: NextRequest) {
+const ADMIN_REGISTRATION_CODE = process.env.ADMIN_REGISTRATION_CODE || 'ADMIN_2024';
+
+export async function POST(request: NextRequest) {
   try {
-    const data = await req.json();
-    const { username, email, password } = data;
+    await dbConnect();
 
-    // 确保数据库连接
-    await connectDB();
-
-    // 检查用户名是否已存在
-    const existingUsername = await UserModel.findOne({ username });
-    if (existingUsername) {
+    // 检查是否允许新用户注册
+    const settings = await SystemSettings.findOne();
+    if (settings && !settings.allowNewRegistrations) {
       return NextResponse.json(
-        { message: '用户名已被使用' },
+        { message: '当前不允许新用户注册' },
+        { status: 403 }
+      );
+    }
+
+    const { username, email, password, registrationCode } = await request.json();
+
+    // 验证必填字段
+    if (!username || !email || !password) {
+      return NextResponse.json(
+        { message: '用户名、邮箱和密码都是必需的' },
         { status: 400 }
       );
     }
 
-    // 检查邮箱是否已存在
-    const existingEmail = await UserModel.findOne({ email });
-    if (existingEmail) {
+    // 检查用户名和邮箱是否已存在
+    const existingUser = await UserModel.findOne({
+      $or: [{ username }, { email }]
+    });
+
+    if (existingUser) {
       return NextResponse.json(
-        { message: '邮箱已被注册' },
+        { message: '用户名或邮箱已被注册' },
         { status: 400 }
       );
     }
-
-    // 加密密码
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
 
     // 创建新用户
-    const user = await UserModel.create({
+    const user = new UserModel({
       username,
       email,
-      password: hashedPassword,
-      role: 'user',
-      subscribedTags: [],
+      password,
+      isAdmin: registrationCode === ADMIN_REGISTRATION_CODE,
+      isActive: true,
       lastLoginAt: new Date(),
+      tags: []
     });
+
+    await user.save();
 
     // 生成JWT令牌
     const token = jwt.sign(
@@ -51,7 +62,7 @@ export async function POST(req: NextRequest) {
         _id: user._id,
         username: user.username,
         email: user.email,
-        role: user.role,
+        role: user.isAdmin ? 'admin' : 'user',
       },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '7d' }
@@ -66,23 +77,19 @@ export async function POST(req: NextRequest) {
       path: '/',
     });
 
-    // 返回用户信息（不包含密码）
-    const userWithoutPassword = {
-      _id: user._id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      subscribedTags: user.subscribedTags,
-    };
-
     return NextResponse.json({
       message: '注册成功',
-      user: userWithoutPassword,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        isAdmin: user.isAdmin
+      }
     });
   } catch (error) {
     console.error('注册失败:', error);
     return NextResponse.json(
-      { message: '注册失败，请稍后重试' },
+      { message: '注册失败', error: error instanceof Error ? error.message : '未知错误' },
       { status: 500 }
     );
   }
