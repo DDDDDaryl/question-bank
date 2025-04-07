@@ -107,29 +107,38 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
       return <div className="text-center py-4">加载中...</div>;
     }
 
-    if (!currentQuestion?.options || !Array.isArray(currentQuestion.options)) {
-      console.error('选项格式错误:', currentQuestion);
+    if (!currentQuestion) {
+      console.error('当前题目数据为空');
+      return <div className="text-center py-4 text-red-500">题目数据错误</div>;
+    }
+
+    // 添加调试日志
+    console.log('当前题目数据:', currentQuestion);
+
+    if (!Array.isArray(currentQuestion.options)) {
+      console.error('选项不是数组:', currentQuestion.options);
       return <div className="text-center py-4 text-red-500">选项数据格式错误</div>;
     }
 
-    const hasInvalidOptions = currentQuestion.options.some(
-      option => {
-        const isInvalid = !option || typeof option.content === 'undefined';
-        if (isInvalid) {
-          console.error('无效的选项数据:', option);
-        }
-        return isInvalid;
+    // 验证每个选项的格式
+    const hasInvalidOptions = currentQuestion.options.some(option => {
+      const isInvalid = !option || typeof option !== 'object' || !('content' in option);
+      if (isInvalid) {
+        console.error('无效的选项数据:', option);
       }
-    );
+      return isInvalid;
+    });
 
     if (hasInvalidOptions) {
-      console.error('存在无效的选项:', currentQuestion.options);
       return <div className="text-center py-4 text-red-500">选项数据不完整</div>;
     }
 
     return (
       <div className="flex flex-col gap-4 w-full mt-4">
         {currentQuestion.options.map((option, index) => {
+          // 添加调试日志
+          console.log(`选项 ${index}:`, option);
+
           const isSelected = selectedAnswers.includes(index);
           const showResult = showExplanation && isSelected;
           const isAnswerCorrect = showResult && option.isCorrect;
