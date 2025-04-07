@@ -11,10 +11,11 @@ export default function Navbar() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthRedirect, setIsAuthRedirect] = useState(false);
 
   const fetchUser = useCallback(async () => {
-    // 如果在登录页面，不获取用户信息
-    if (pathname === '/auth') {
+    // 如果在登录页面或正在跳转到登录页面，不获取用户信息
+    if (pathname === '/auth' || isAuthRedirect) {
       setLoading(false);
       return;
     }
@@ -44,11 +45,15 @@ export default function Navbar() {
     } finally {
       setLoading(false);
     }
-  }, [pathname]);
+  }, [pathname, isAuthRedirect]);
 
   useEffect(() => {
+    // 如果是从登录页面返回，重置标记
+    if (pathname !== '/auth' && isAuthRedirect) {
+      setIsAuthRedirect(false);
+    }
     fetchUser();
-  }, [fetchUser]);
+  }, [fetchUser, pathname, isAuthRedirect]);
 
   const handleLogout = async () => {
     try {
@@ -60,6 +65,7 @@ export default function Navbar() {
       if (response.ok) {
         setUser(null);
         setError(null);
+        setIsAuthRedirect(true);
         window.location.href = '/auth';
       } else {
         const data = await response.json();
@@ -70,6 +76,13 @@ export default function Navbar() {
       console.error('Logout error:', error);
       setError(error instanceof Error ? error.message : '登出失败');
     }
+  };
+
+  const handleAuthClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log('Auth click: redirecting to auth page');
+    setIsAuthRedirect(true);
+    window.location.href = '/auth';
   };
 
   const isActive = (path: string) => pathname === path;
@@ -159,6 +172,7 @@ export default function Navbar() {
             ) : (
               <a
                 href="/auth"
+                onClick={handleAuthClick}
                 className="text-sm font-medium text-gray-500 hover:text-gray-700"
               >
                 登录/注册
