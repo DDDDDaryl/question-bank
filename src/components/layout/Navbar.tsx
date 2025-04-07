@@ -71,16 +71,18 @@ export default function Navbar() {
     }
   };
 
-  const handleAuthClick = () => {
+  const handleAuthClick = async () => {
     console.log('Attempting to navigate to auth page...');
     try {
-      router.push('/auth');
-      console.log('Navigation initiated successfully');
+      await router.push('/auth');
+      console.log('Navigation completed successfully');
     } catch (error) {
       console.error('Navigation error:', error);
-      // 如果路由导航失败，尝试使用window.location
-      console.log('Falling back to window.location.href');
-      window.location.href = '/auth';
+      // 如果路由导航失败，尝试使用Link组件的行为
+      const link = document.createElement('a');
+      link.href = '/auth';
+      link.click();
+      console.log('Fallback navigation initiated');
     }
   };
 
