@@ -20,10 +20,11 @@ export interface JWTPayload {
 export function generateToken(user: UserProfile): string {
   return jwt.sign(
     {
-      _id: user._id,
+      userId: user._id,
       username: user.username,
       email: user.email,
       role: user.role,
+      isAdmin: user.role === 'admin'
     },
     JWT_SECRET,
     { expiresIn: TOKEN_EXPIRY }

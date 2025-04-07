@@ -7,7 +7,7 @@ import { UpdateProfileData } from '@/types/user';
 export const GET = withAuth(async (request: NextRequest, user: any) => {
   try {
     await dbConnect();
-    const userData = await UserModel.findById(user._id).select('-password');
+    const userData = await UserModel.findById(user.userId).select('-password');
     
     if (!userData) {
       return NextResponse.json(
@@ -38,7 +38,7 @@ export const PATCH = withAuth(async (request: NextRequest, user: any) => {
     if (data.email) {
       const existingUser = await UserModel.findOne({
         email: data.email,
-        _id: { $ne: user._id }
+        _id: { $ne: user.userId }
       });
       
       if (existingUser) {
@@ -53,7 +53,7 @@ export const PATCH = withAuth(async (request: NextRequest, user: any) => {
     if (data.username) {
       const existingUser = await UserModel.findOne({
         username: data.username,
-        _id: { $ne: user._id }
+        _id: { $ne: user.userId }
       });
       
       if (existingUser) {
@@ -65,7 +65,7 @@ export const PATCH = withAuth(async (request: NextRequest, user: any) => {
     }
     
     const updatedUser = await UserModel.findByIdAndUpdate(
-      user._id,
+      user.userId,
       { $set: data },
       { new: true }
     ).select('-password');
