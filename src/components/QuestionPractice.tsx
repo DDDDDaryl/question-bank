@@ -136,12 +136,9 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
     return (
       <div className="flex flex-col gap-4 w-full mt-4">
         {currentQuestion.options.map((option, index) => {
-          // 添加调试日志
-          console.log(`选项 ${index}:`, option);
-
           const isSelected = selectedAnswers.includes(index);
-          const showResult = showExplanation && isSelected;
-          const isAnswerCorrect = showResult && option.isCorrect;
+          const showResult = showExplanation;
+          const isCorrect = option.isCorrect;
 
           return (
             <button
@@ -150,17 +147,25 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
               disabled={showExplanation}
               className={`w-full p-4 text-left rounded-lg border transition-colors duration-200 flex items-center
                 ${showResult 
-                  ? isAnswerCorrect 
-                    ? 'bg-green-100 border-green-500' 
-                    : 'bg-red-100 border-red-500'
+                  ? isCorrect
+                    ? 'bg-green-50 border-green-500 text-green-700'
+                    : isSelected
+                      ? 'bg-red-50 border-red-500 text-red-700'
+                      : 'bg-white border-gray-200 text-gray-700'
                   : isSelected
-                  ? 'bg-blue-100 border-blue-500'
-                  : 'hover:bg-gray-100 border-gray-200'}`}
+                    ? 'bg-blue-50 border-blue-500 text-blue-700'
+                    : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'}`}
             >
-              <span className="font-medium mr-4 text-gray-500">
+              <span className="font-medium mr-4">
                 {String.fromCharCode(65 + index)}.
               </span>
               <span className="flex-1">{option.content}</span>
+              {showResult && isCorrect && (
+                <span className="ml-2 text-green-600">✓</span>
+              )}
+              {showResult && !isCorrect && isSelected && (
+                <span className="ml-2 text-red-600">✗</span>
+              )}
             </button>
           );
         })}
@@ -206,23 +211,33 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
             }`}>
               {results[results.length - 1].correct ? '回答正确！' : '回答错误'}
             </h3>
-            <p className="mt-2 text-gray-700">{currentQuestion.explanation}</p>
-            <div className="mt-4">
-              <h4 className="font-medium text-gray-700 mb-2">正确答案：</h4>
-              <div className="space-y-2">
-                {currentQuestion.options.map((option, index) => (
-                  option.isCorrect && (
-                    <div key={index} className="text-green-700">
-                      {String.fromCharCode(65 + index)}. {option.content}
-                    </div>
-                  )
-                ))}
+            {!results[results.length - 1].correct && (
+              <div className="mt-4">
+                <h4 className="font-medium text-gray-700 mb-2">正确答案：</h4>
+                <div className="space-y-2">
+                  {currentQuestion.options.map((option, index) => (
+                    option.isCorrect && (
+                      <div key={index} className="flex items-center text-green-700">
+                        <span className="font-medium mr-2">
+                          {String.fromCharCode(65 + index)}.
+                        </span>
+                        <span>{option.content}</span>
+                      </div>
+                    )
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+            {currentQuestion.explanation && (
+              <div className="mt-4">
+                <h4 className="font-medium text-gray-700 mb-2">解析：</h4>
+                <p className="text-gray-600">{currentQuestion.explanation}</p>
+              </div>
+            )}
           </div>
           <button
             onClick={handleNext}
-            className="w-full py-3 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600"
+            className="w-full py-3 rounded-lg font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             {isLastQuestion ? '完成练习' : '下一题'}
           </button>
