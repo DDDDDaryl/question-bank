@@ -13,6 +13,11 @@ export default function Navbar() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // 如果在登录页面，不获取用户信息
+    if (pathname === '/auth') {
+      setLoading(false);
+      return;
+    }
     fetchUser();
   }, [pathname]); // 当路径变化时重新获取用户信息
 
@@ -30,12 +35,14 @@ export default function Navbar() {
       } else {
         console.error('Failed to fetch user:', data.message);
         setUser(null);
-        setError(data.message);
+        // 在登录页面不显示错误信息
+        setError(pathname === '/auth' ? null : data.message);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setUser(null);
-      setError(error instanceof Error ? error.message : '获取用户信息失败');
+      // 在登录页面不显示错误信息
+      setError(pathname === '/auth' ? null : (error instanceof Error ? error.message : '获取用户信息失败'));
     } finally {
       setLoading(false);
     }
