@@ -11,69 +11,63 @@ import { getToken } from '@/lib/auth';
 // GET /api/questions
 export async function GET(req: NextRequest) {
   try {
-    const db = await dbConnect();
-    if (!db.connection.readyState) {
-      throw new Error('数据库连接失败');
-    }
-    
+    await dbConnect();
     const { searchParams } = new URL(req.url);
-    const type = searchParams.get('type');
-    const difficulty = searchParams.get('difficulty');
-    const tag = searchParams.get('tag');
-    const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const tag = searchParams.get('tag');
+    const search = searchParams.get('search');
 
-    // 构建查询条件
-    const query: any = {};
-    if (type) query.type = type;
-    if (difficulty) query.difficulty = difficulty;
-    if (tag) query.tags = tag;
-    if (search) query.title = { $regex: search, $options: 'i' };
+    let query: any = {};
+    if (tag) {
+      query.tags = tag;
+    }
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } },
+      ];
+    }
 
-    // 获取题目总数
-    const total = await Question.countDocuments(query);
-
-    // 获取分页数据
-    const questions = await Question.find(query)
-      .select('_id title content type difficulty options explanation tags createdAt updatedAt')
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .sort({ createdAt: -1 })
-      .lean();
+    const skip = (page - 1) * limit;
+    const [questions, total] = await Promise.all([
+      Question.find(query).skip(skip).limit(limit),
+      Question.countDocuments(query),
+    ]);
 
     if (!questions || questions.length === 0) {
-      return NextResponse.json({ questions: [], total: 0, page, limit, totalPages: 0 });
+      return NextResponse.json({
+        questions: [],
+        total: 0,
+        page,
+        limit,
+        totalPages: 0,
+      });
     }
 
     // 确保每个问题的选项都有正确的结构
     const formattedQuestions = questions.map(question => {
-      const formattedOptions = Array.isArray(question.options) 
-        ? question.options.map((option, index) => {
-            // 如果选项是字符串，直接使用作为内容
-            if (typeof option === 'string') {
-              return {
-                content: option,
-                isCorrect: false
-              };
-            }
-            // 如果选项是对象，保留原有内容
-            if (typeof option === 'object' && option !== null) {
-              return {
-                content: option.content,
-                isCorrect: typeof option.isCorrect === 'boolean' ? option.isCorrect : false
-              };
-            }
-            // 如果选项完全无效，才使用默认值
-            return {
-              content: `选项 ${index + 1}`,
-              isCorrect: false
-            };
-          })
-        : [];
+      const formattedOptions = question.options.map((option: any) => {
+        // 如果选项已经是正确的格式，直接返回
+        if (option && typeof option === 'object' && 'content' in option && 'isCorrect' in option) {
+          return option;
+        }
+        // 如果选项是字符串，转换为正确的格式
+        if (typeof option === 'string') {
+          return {
+            content: option,
+            isCorrect: false
+          };
+        }
+        // 如果选项格式不正确，返回一个默认值
+        return {
+          content: '选项内容缺失',
+          isCorrect: false
+        };
+      });
 
       return {
-        ...question,
+        ...question.toObject(),
         options: formattedOptions
       };
     });

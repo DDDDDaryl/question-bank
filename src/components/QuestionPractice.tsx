@@ -113,7 +113,13 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
     }
 
     const hasInvalidOptions = currentQuestion.options.some(
-      option => !option || typeof option.content === 'undefined'
+      option => {
+        const isInvalid = !option || typeof option.content === 'undefined';
+        if (isInvalid) {
+          console.error('无效的选项数据:', option);
+        }
+        return isInvalid;
+      }
     );
 
     if (hasInvalidOptions) {
