@@ -1,55 +1,53 @@
-import { NextResponse } from 'next/server';
-import connectToDatabase from '@/lib/mongodb';
+import { NextRequest, NextResponse } from 'next/server';
+import dbConnect from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
-import { Question } from '@/models/Question';
-import Mistake from '@/models/Mistake';
+import { Question } from '@/models/mongodb/Question';
+import { Mistake } from '@/models/mongodb/Mistake';
 
 export async function GET() {
   try {
-    await connectToDatabase();
+    await dbConnect();
     const mistakes = await Mistake.find().populate('questionId');
-
-    return NextResponse.json({
-      success: true,
-      mistakes,
-    });
+    return NextResponse.json(mistakes);
   } catch (error) {
-    console.error('Failed to fetch mistakes:', error);
+    console.error('获取错题失败:', error);
     return NextResponse.json(
-      {
-        success: false,
-        message: '获取错题失败',
-      },
+      { error: '获取错题失败' },
       { status: 500 }
     );
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    await dbConnect();
     const { questionIds } = await request.json();
     
-    await connectToDatabase();
-    
-    // 将题目 ID 转换为 ObjectId 并创建错题记录
-    const mistakes = questionIds.map((id: string) => ({
-      questionId: new ObjectId(id),
-      timestamp: new Date(),
-    }));
-    
-    await Mistake.insertMany(mistakes);
+    if (!Array.isArray(questionIds)) {
+      return NextResponse.json(
+        { error: '无效的请求数据' },
+        { status: 400 }
+      );
+    }
+
+    const mistakes = await Promise.all(
+      questionIds.map(async (questionId) => {
+        const question = await Question.findById(questionId);
+        if (!question) {
+          throw new Error(`题目不存在: ${questionId}`);
+        }
+        return Mistake.create({ questionId });
+      })
+    );
 
     return NextResponse.json({
-      success: true,
       message: '错题保存成功',
+      mistakes
     });
   } catch (error) {
-    console.error('Failed to save mistakes:', error);
+    console.error('保存错题失败:', error);
     return NextResponse.json(
-      {
-        success: false,
-        message: '保存错题失败',
-      },
+      { error: '保存错题失败' },
       { status: 500 }
     );
   }

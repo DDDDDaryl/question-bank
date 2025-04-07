@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateQuestion } from '@/lib/validation';
-import { Question } from '@/models/Question';
+import { Question } from '@/models/mongodb/Question';
 import dbConnect from '@/lib/mongodb';
 import { ZodError } from 'zod';
 import { withAuth } from '@/lib/auth';
 import jwt from 'jsonwebtoken';
-import { UserModel } from '@/models/User';
+import { UserModel } from '@/models/mongodb/User';
 import { getToken } from '@/lib/auth';
 
 // GET /api/questions
 export async function GET(req: NextRequest) {
   try {
-    await dbConnect();
+    const db = await dbConnect();
+    if (!db.connection.readyState) {
+      throw new Error('数据库连接失败');
+    }
     
     const { searchParams } = new URL(req.url);
     const type = searchParams.get('type');
@@ -85,7 +88,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('获取题目失败:', error);
     return NextResponse.json(
-      { error: '获取题目失败' },
+      { error: '获取题目失败', details: error instanceof Error ? error.message : '未知错误' },
       { status: 500 }
     );
   }
@@ -94,7 +97,10 @@ export async function GET(req: NextRequest) {
 // POST /api/questions
 export async function POST(req: NextRequest) {
   try {
-    await dbConnect();
+    const db = await dbConnect();
+    if (!db.connection.readyState) {
+      throw new Error('数据库连接失败');
+    }
     
     const token = await getToken();
     if (!token) {
@@ -124,7 +130,7 @@ export async function POST(req: NextRequest) {
       );
     }
     return NextResponse.json(
-      { message: '创建题目失败，请稍后重试' },
+      { message: '创建题目失败', details: error instanceof Error ? error.message : '未知错误' },
       { status: 500 }
     );
   }
