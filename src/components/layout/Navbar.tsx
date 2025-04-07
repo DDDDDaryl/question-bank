@@ -66,7 +66,7 @@ export default function Navbar() {
 
   const handleAuthClick = () => {
     console.log('Navigating to auth page...');
-    router.push('/auth');
+    window.location.href = '/auth';
   };
 
   const isActive = (path: string) => pathname === path;

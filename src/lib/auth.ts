@@ -71,16 +71,38 @@ export async function verifyAuth(request: NextRequest): Promise<JWTPayload | nul
   }
 }
 
-export function withAuth(handler: Function) {
+export function withAuth(handler: (request: NextRequest, user: JWTPayload) => Promise<NextResponse>) {
   return async (request: NextRequest) => {
-    const user = await verifyAuth(request);
-    if (!user) {
+    try {
+      console.log('Verifying authentication...');
+      const token = request.cookies.get('token')?.value;
+      
+      if (!token) {
+        console.error('No token found in cookies');
+        return NextResponse.json(
+          { success: false, message: '未授权访问' },
+          { status: 401 }
+        );
+      }
+
+      console.log('Token found, verifying...');
+      const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+      console.log('Token verified, user:', decoded);
+
+      return handler(request, decoded);
+    } catch (error) {
+      console.error('Authentication error:', error);
+      if (error instanceof jwt.JsonWebTokenError) {
+        return NextResponse.json(
+          { success: false, message: '无效的认证令牌' },
+          { status: 401 }
+        );
+      }
       return NextResponse.json(
-        { success: false, message: '未授权访问' },
+        { success: false, message: '认证失败' },
         { status: 401 }
       );
     }
-    return handler(request, user);
   };
 }
 

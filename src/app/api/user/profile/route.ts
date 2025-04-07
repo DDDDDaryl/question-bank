@@ -6,19 +6,45 @@ import { UpdateProfileData } from '@/types/user';
 
 export const GET = withAuth(async (request: NextRequest, user: any) => {
   try {
+    console.log('User from token:', user);
+    
+    if (!user || !user.userId) {
+      console.error('No user ID in token');
+      return NextResponse.json(
+        { success: false, message: '未授权访问' },
+        { status: 401 }
+      );
+    }
+
     await dbConnect();
+    console.log('Attempting to find user with ID:', user.userId);
+    
     const userData = await UserModel.findById(user.userId).select('-password');
+    console.log('User data from DB:', userData);
     
     if (!userData) {
+      console.error('User not found in database');
       return NextResponse.json(
         { success: false, message: '用户不存在' },
         { status: 404 }
       );
     }
     
+    const userResponse = {
+      _id: userData._id,
+      username: userData.username,
+      email: userData.email,
+      role: userData.role || 'user',
+      subscribedTags: userData.subscribedTags || [],
+      isAdmin: userData.role === 'admin',
+      isActive: userData.isActive
+    };
+    
+    console.log('Sending user response:', userResponse);
+    
     return NextResponse.json({
       success: true,
-      user: userData
+      user: userResponse
     });
   } catch (error) {
     console.error('获取用户信息失败:', error);
