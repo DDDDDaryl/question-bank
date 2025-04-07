@@ -10,6 +10,7 @@ export default function Navbar() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUser();
@@ -17,16 +18,24 @@ export default function Navbar() {
 
   const fetchUser = async () => {
     try {
+      console.log('Fetching user profile...');
       const response = await fetch('/api/user/profile');
       const data = await response.json();
+      
+      console.log('User profile response:', data);
+      
       if (response.ok) {
         setUser(data.user);
+        setError(null);
       } else {
+        console.error('Failed to fetch user:', data.message);
         setUser(null);
+        setError(data.message);
       }
     } catch (error) {
-      console.error('获取用户信息失败:', error);
+      console.error('Error fetching user profile:', error);
       setUser(null);
+      setError(error instanceof Error ? error.message : '获取用户信息失败');
     } finally {
       setLoading(false);
     }
@@ -34,21 +43,29 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
+      console.log('Logging out...');
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
       });
 
       if (response.ok) {
         setUser(null);
+        setError(null);
         router.push('/auth');
         router.refresh();
+      } else {
+        const data = await response.json();
+        console.error('Logout failed:', data.message);
+        setError(data.message);
       }
     } catch (error) {
-      console.error('登出失败:', error);
+      console.error('Logout error:', error);
+      setError(error instanceof Error ? error.message : '登出失败');
     }
   };
 
   const handleAuthClick = () => {
+    console.log('Navigating to auth page...');
     router.push('/auth');
   };
 
@@ -114,6 +131,9 @@ export default function Navbar() {
             </div>
           </div>
           <div className="flex items-center">
+            {error && (
+              <span className="text-red-500 text-sm mr-4">{error}</span>
+            )}
             {user ? (
               <div className="flex items-center space-x-4">
                 <Link
