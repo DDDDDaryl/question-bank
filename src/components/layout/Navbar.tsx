@@ -72,8 +72,16 @@ export default function Navbar() {
   };
 
   const handleAuthClick = () => {
-    console.log('Navigating to auth page...');
-    window.location.href = '/auth';
+    console.log('Attempting to navigate to auth page...');
+    try {
+      router.push('/auth');
+      console.log('Navigation initiated successfully');
+    } catch (error) {
+      console.error('Navigation error:', error);
+      // 如果路由导航失败，尝试使用window.location
+      console.log('Falling back to window.location.href');
+      window.location.href = '/auth';
+    }
   };
 
   const isActive = (path: string) => pathname === path;
