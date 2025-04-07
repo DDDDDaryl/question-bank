@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { UserProfile } from '@/types/user';
@@ -11,17 +11,15 @@ export default function Navbar() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  useEffect(() => {
-    // 如果在登录页面，不获取用户信息
-    if (pathname === '/auth') {
+  const fetchUser = useCallback(async () => {
+    // 如果正在导航或在登录页面，不获取用户信息
+    if (isNavigating || pathname === '/auth') {
       setLoading(false);
       return;
     }
-    fetchUser();
-  }, [pathname]); // 当路径变化时重新获取用户信息
 
-  const fetchUser = async () => {
     try {
       console.log('Fetching user profile...');
       const response = await fetch('/api/user/profile');
@@ -35,21 +33,24 @@ export default function Navbar() {
       } else {
         console.error('Failed to fetch user:', data.message);
         setUser(null);
-        // 在登录页面不显示错误信息
         setError(pathname === '/auth' ? null : data.message);
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setUser(null);
-      // 在登录页面不显示错误信息
       setError(pathname === '/auth' ? null : (error instanceof Error ? error.message : '获取用户信息失败'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [pathname, isNavigating]);
+
+  useEffect(() => {
+    fetchUser();
+  }, [fetchUser]);
 
   const handleLogout = async () => {
     try {
+      setIsNavigating(true);
       console.log('Logging out...');
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
@@ -68,7 +69,13 @@ export default function Navbar() {
     } catch (error) {
       console.error('Logout error:', error);
       setError(error instanceof Error ? error.message : '登出失败');
+    } finally {
+      setIsNavigating(false);
     }
+  };
+
+  const handleAuthClick = () => {
+    setIsNavigating(true);
   };
 
   const isActive = (path: string) => pathname === path;
@@ -158,6 +165,7 @@ export default function Navbar() {
             ) : (
               <Link
                 href="/auth"
+                onClick={handleAuthClick}
                 className="text-sm font-medium text-gray-500 hover:text-gray-700"
               >
                 登录/注册
