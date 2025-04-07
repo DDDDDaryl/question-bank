@@ -50,4 +50,11 @@ export interface ImportQuestionData {
   explanation: string;
   tags: string[];
   createdBy: string;
+}
+
+export interface QuestionResult {
+  questionId: string;
+  correct: boolean;
+  selectedAnswers: number[];
+  correctAnswers: number[];
 } 

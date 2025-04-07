@@ -1,17 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Question, QuestionOption } from '@/types/question';
+import { Question, QuestionResult } from '@/types/question';
 
 interface QuestionPracticeProps {
   questions: Question[];
-  onComplete: (results: Array<{ questionId: string; correct: boolean }>) => void;
+  onComplete: (results: QuestionResult[]) => void;
 }
 
 export default function QuestionPractice({ questions, onComplete }: QuestionPracticeProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
-  const [results, setResults] = useState<Array<{ questionId: string; correct: boolean }>>([]);
+  const [results, setResults] = useState<QuestionResult[]>([]);
   const [showExplanation, setShowExplanation] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -79,17 +79,56 @@ export default function QuestionPractice({ questions, onComplete }: QuestionPrac
       return;
     }
 
+    // 确保有选择答案
+    if (selectedAnswers.length === 0) {
+      console.error('No answer selected');
+      return;
+    }
+
+    // 获取所有正确答案的索引
     const correctAnswers = currentQuestion.options
       .map((option, index) => option.isCorrect ? index : -1)
       .filter(index => index !== -1);
 
-    const isCorrect = currentQuestion.type === 'SINGLE_CHOICE'
-      ? selectedAnswers[0] === correctAnswers[0]
-      : selectedAnswers.length === correctAnswers.length &&
-        selectedAnswers.every(a => correctAnswers.includes(a));
+    // 如果没有正确答案，记录错误
+    if (correctAnswers.length === 0) {
+      console.error('No correct answer defined for question:', currentQuestion._id);
+      return;
+    }
 
-    setResults([...results, { questionId: currentQuestion._id, correct: isCorrect }]);
+    let isCorrect = false;
+
+    if (currentQuestion.type === 'SINGLE_CHOICE') {
+      // 单选题：确保只选择了一个答案，且是正确答案
+      isCorrect = selectedAnswers.length === 1 && selectedAnswers[0] === correctAnswers[0];
+    } else {
+      // 多选题：
+      // 1. 选择的答案数量必须与正确答案数量相同
+      // 2. 所有选择的答案都必须是正确答案
+      // 3. 所有正确答案都必须被选择
+      isCorrect = selectedAnswers.length === correctAnswers.length &&
+                  selectedAnswers.every(selected => correctAnswers.includes(selected)) &&
+                  correctAnswers.every(correct => selectedAnswers.includes(correct));
+    }
+
+    // 记录结果
+    const result = {
+      questionId: currentQuestion._id,
+      correct: isCorrect,
+      selectedAnswers,
+      correctAnswers
+    } as QuestionResult;
+
+    setResults([...results, result]);
     setShowExplanation(true);
+
+    // 调试日志
+    console.log('答题结果:', {
+      type: currentQuestion.type,
+      selected: selectedAnswers,
+      correct: correctAnswers,
+      isCorrect
+    });
   };
 
   const handleNext = () => {
