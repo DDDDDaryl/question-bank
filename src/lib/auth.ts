@@ -2,15 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { cookies } from 'next/headers';
 import { UserProfile } from '@/types/user';
+import { verify } from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 const TOKEN_EXPIRY = '7d';
 
-interface JWTPayload {
-  _id: string;
-  username: string;
+export interface JWTPayload {
+  userId: string;
   email: string;
-  role: string;
+  username: string;
+  isAdmin: boolean;
+  iat?: number;
+  exp?: number;
 }
 
 export function generateToken(user: UserProfile): string {
@@ -45,10 +48,10 @@ export async function getToken(): Promise<JWTPayload | null> {
   if (!token) return null;
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as JWTPayload;
+    const decoded = verify(token, process.env.JWT_SECRET || 'your-secret-key') as JWTPayload;
     return decoded;
   } catch (error) {
-    console.error('Token验证失败:', error);
+    console.error('Token verification failed:', error);
     return null;
   }
 }

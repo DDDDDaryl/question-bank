@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { UserModel } from '@/models/mongodb/User';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { sign } from 'jsonwebtoken';
 import { cookies } from 'next/headers';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export async function POST(req: NextRequest) {
   try {
@@ -21,6 +23,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 检查用户是否被禁用
+    if (!user.isActive) {
+      return NextResponse.json(
+        { message: '账号已被禁用，请联系管理员' },
+        { status: 403 }
+      );
+    }
+
     // 验证密码
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
@@ -34,15 +44,15 @@ export async function POST(req: NextRequest) {
     user.lastLoginAt = new Date();
     await user.save();
 
-    // 生成 JWT token
-    const token = jwt.sign(
+    // 生成 JWT token，包含管理员状态
+    const token = sign(
       {
-        _id: user._id,
-        username: user.username,
+        userId: user._id,
         email: user.email,
-        role: user.role,
+        username: user.username,
+        isAdmin: user.isAdmin
       },
-      process.env.JWT_SECRET || 'your-secret-key',
+      JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -62,10 +72,13 @@ export async function POST(req: NextRequest) {
       email: user.email,
       role: user.role,
       subscribedTags: user.subscribedTags,
+      isAdmin: user.isAdmin,
+      isActive: user.isActive
     };
 
     return NextResponse.json({
       message: '登录成功',
+      token,
       user: userWithoutPassword,
     });
   } catch (error) {

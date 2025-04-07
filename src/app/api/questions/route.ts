@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     const validatedData = validateQuestion(data);
     const question = await Question.create({
       ...validatedData,
-      createdBy: token._id
+      createdBy: token.userId
     });
 
     return NextResponse.json({
