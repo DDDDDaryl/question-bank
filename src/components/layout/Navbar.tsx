@@ -44,9 +44,21 @@ export default function Navbar() {
     }
   }, [pathname, isNavigating]);
 
+  // 使用 useEffect 监听路由变化
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    // 如果是导航到登录页面，立即重置状态
+    if (pathname === '/auth') {
+      setLoading(false);
+      setUser(null);
+      setError(null);
+      return;
+    }
+    
+    // 如果不是导航状态，获取用户信息
+    if (!isNavigating) {
+      fetchUser();
+    }
+  }, [pathname, isNavigating, fetchUser]);
 
   const handleLogout = async () => {
     try {
@@ -75,7 +87,12 @@ export default function Navbar() {
   };
 
   const handleAuthClick = () => {
+    console.log('Auth click: setting navigation state');
     setIsNavigating(true);
+    // 立即清除用户状态
+    setUser(null);
+    setError(null);
+    setLoading(false);
   };
 
   const isActive = (path: string) => pathname === path;
