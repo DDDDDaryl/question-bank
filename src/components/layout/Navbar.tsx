@@ -11,11 +11,10 @@ export default function Navbar() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isNavigating, setIsNavigating] = useState(false);
 
   const fetchUser = useCallback(async () => {
-    // 如果正在导航或在登录页面，不获取用户信息
-    if (isNavigating || pathname === '/auth') {
+    // 如果在登录页面，不获取用户信息
+    if (pathname === '/auth') {
       setLoading(false);
       return;
     }
@@ -33,36 +32,26 @@ export default function Navbar() {
       } else {
         console.error('Failed to fetch user:', data.message);
         setUser(null);
-        setError(pathname === '/auth' ? null : data.message);
+        // 只在非401错误时显示错误信息
+        if (response.status !== 401) {
+          setError(data.message);
+        }
       }
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setUser(null);
-      setError(pathname === '/auth' ? null : (error instanceof Error ? error.message : '获取用户信息失败'));
+      setError(error instanceof Error ? error.message : '获取用户信息失败');
     } finally {
       setLoading(false);
     }
-  }, [pathname, isNavigating]);
+  }, [pathname]);
 
-  // 使用 useEffect 监听路由变化
   useEffect(() => {
-    // 如果是导航到登录页面，立即重置状态
-    if (pathname === '/auth') {
-      setLoading(false);
-      setUser(null);
-      setError(null);
-      return;
-    }
-    
-    // 如果不是导航状态，获取用户信息
-    if (!isNavigating) {
-      fetchUser();
-    }
-  }, [pathname, isNavigating, fetchUser]);
+    fetchUser();
+  }, [fetchUser]);
 
   const handleLogout = async () => {
     try {
-      setIsNavigating(true);
       console.log('Logging out...');
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
@@ -71,8 +60,7 @@ export default function Navbar() {
       if (response.ok) {
         setUser(null);
         setError(null);
-        router.push('/auth');
-        router.refresh();
+        window.location.href = '/auth';
       } else {
         const data = await response.json();
         console.error('Logout failed:', data.message);
@@ -81,18 +69,7 @@ export default function Navbar() {
     } catch (error) {
       console.error('Logout error:', error);
       setError(error instanceof Error ? error.message : '登出失败');
-    } finally {
-      setIsNavigating(false);
     }
-  };
-
-  const handleAuthClick = () => {
-    console.log('Auth click: setting navigation state');
-    setIsNavigating(true);
-    // 立即清除用户状态
-    setUser(null);
-    setError(null);
-    setLoading(false);
   };
 
   const isActive = (path: string) => pathname === path;
@@ -180,13 +157,12 @@ export default function Navbar() {
                 </button>
               </div>
             ) : (
-              <Link
+              <a
                 href="/auth"
-                onClick={handleAuthClick}
                 className="text-sm font-medium text-gray-500 hover:text-gray-700"
               >
                 登录/注册
-              </Link>
+              </a>
             )}
           </div>
         </div>
