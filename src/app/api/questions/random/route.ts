@@ -74,6 +74,14 @@ export async function GET(request: NextRequest) {
         };
       });
 
+      // 确保至少有一个正确答案
+      const hasCorrectAnswer = formattedOptions.some(option => option.isCorrect);
+      if (!hasCorrectAnswer && formattedOptions.length > 0) {
+        // 如果没有正确答案，将第一个选项标记为正确
+        formattedOptions[0].isCorrect = true;
+        console.log('没有正确答案，已将第一个选项标记为正确答案');
+      }
+
       const formattedQuestion = {
         ...question,
         options: formattedOptions
@@ -85,9 +93,19 @@ export async function GET(request: NextRequest) {
       return formattedQuestion;
     });
 
+    // 过滤掉没有选项的题目
+    const validQuestions = formattedQuestions.filter((q: Partial<Question>) => q.options && q.options.length > 0);
+
+    if (validQuestions.length === 0) {
+      return NextResponse.json({
+        success: false,
+        message: '没有找到有效的题目'
+      }, { status: 404 });
+    }
+
     return NextResponse.json({
       success: true,
-      questions: formattedQuestions,
+      questions: validQuestions,
     });
   } catch (error) {
     console.error('获取随机题目失败:', error);

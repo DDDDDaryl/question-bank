@@ -12,6 +12,7 @@ export interface JWTPayload {
   email: string;
   username: string;
   isAdmin: boolean;
+  role?: 'user' | 'admin';
   iat?: number;
   exp?: number;
 }
@@ -56,14 +57,15 @@ export async function getToken(): Promise<JWTPayload | null> {
   }
 }
 
-export async function verifyAuth(request: NextRequest): Promise<UserProfile | null> {
+export async function verifyAuth(request: NextRequest): Promise<JWTPayload | null> {
   try {
     const token = request.cookies.get('token')?.value;
     if (!token) return null;
 
-    const decoded = jwt.verify(token, JWT_SECRET) as UserProfile;
+    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
     return decoded;
   } catch (error) {
+    console.error('Token verification failed:', error);
     return null;
   }
 }
